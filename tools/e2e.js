@@ -120,6 +120,12 @@ async function main() {
 
     // ================= Gradebook: roster auto-blur =================
     const page = await context.newPage();
+    // 1.1.0 opens the options page on first install; close it so it
+    // does not sit in front of the fixture tabs. This happens after
+    // newPage so the persistent context always keeps one page alive.
+    for (const p of context.pages()) {
+      if (p !== page && p.url().includes("options.html")) await p.close();
+    }
     await page.goto(pathToFileURL(path.join(FIXTURES, "gradebook.html")).href);
     await sleep(1200);
 

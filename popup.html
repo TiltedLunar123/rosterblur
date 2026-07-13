@@ -4,66 +4,102 @@
   <meta charset="UTF-8" />
   <link rel="stylesheet" href="shared.css" />
   <style>
-    body { width: 300px; padding: 12px; }
-    header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    body { width: 320px; padding: 12px; }
+    header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
     header img { width: 22px; height: 22px; }
+    .badges { margin-left: auto; display: flex; gap: 6px; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .grid button { width: 100%; }
-    .section { margin-top: 12px; }
-    .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
-    .slider-row output { min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
-    footer { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
-    .keys { font-size: 11px; color: var(--muted); }
-    kbd {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 0 4px;
-      font-size: 10px;
+    .tool {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 9px 10px;
+      text-align: left;
+      font-size: 12.5px;
     }
-    #siteNote { margin-top: 8px; }
-    #proHint { margin-top: 10px; }
+    .tool svg { flex: none; width: 15px; height: 15px; color: var(--accent); }
+    .tool.active svg { color: var(--mint); }
+    .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+    .slider-row > span { font-size: 12.5px; color: var(--muted); }
+    .slider-row output { min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; font-size: 12.5px; }
+    .section { margin-top: 12px; }
+    .card.slim { padding: 9px 12px; }
+    .site-row { display: flex; align-items: center; gap: 10px; }
+    .site-row span { flex: 1; }
+    #rosterCard a { display: inline-block; margin-top: 4px; font-size: 12px; }
+    .upsell-title { font-weight: 600; font-size: 13px; }
+    .upsell p { margin: 6px 0 10px; }
+    .upsell-actions { display: flex; align-items: center; gap: 10px; }
+    .upsell-actions a { font-size: 12px; }
+    footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+    .keys { font-size: 11px; color: var(--muted); }
+    #siteNote { margin-top: 10px; }
   </style>
 </head>
 <body>
   <header>
     <img src="icons/icon32.png" alt="" />
     <h1>RosterBlur</h1>
-    <span id="proBadge" class="pill pro hidden">PRO</span>
-    <span id="meetingBadge" class="pill pro hidden">MEETING</span>
+    <span class="badges">
+      <span id="proBadge" class="pill pro hidden">PRO</span>
+      <span id="meetingBadge" class="pill pro hidden">MEETING</span>
+    </span>
   </header>
 
   <div class="grid">
-    <button id="pickerBtn">Blur picker</button>
-    <button id="areaBtn">Blur an area</button>
-    <button id="panicBtn">Panic blur</button>
-    <button id="maskBtn">Mask tab title</button>
+    <button id="pickerBtn" class="tool" aria-pressed="false" title="Hover and click any element to blur it (Alt+Shift+B)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+      <span>Click to blur</span>
+    </button>
+    <button id="areaBtn" class="tool" title="Drag a rectangle to blur that region">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2" stroke-dasharray="4 3"/></svg>
+      <span>Blur an area</span>
+    </button>
+    <button id="panicBtn" class="tool" aria-pressed="false" title="Blur the whole page instantly (Alt+Shift+H)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      <span>Panic blur</span>
+    </button>
+    <button id="maskBtn" class="tool" aria-pressed="false" title="Replace this tab's title and icon with neutral ones">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="6" y1="7" x2="10" y2="7"/></svg>
+      <span>Hide tab title</span>
+    </button>
   </div>
 
-  <div class="section">
-    <span class="muted">Blur strength</span>
-    <div class="slider-row">
-      <input type="range" id="blurRange" min="4" max="16" step="1" />
-      <output id="blurOut">8px</output>
-    </div>
+  <div class="slider-row">
+    <span>Strength</span>
+    <input type="range" id="blurRange" min="4" max="16" step="1" aria-label="Blur strength" />
+    <output id="blurOut">8px</output>
   </div>
 
-  <div class="section card" id="rosterCard">
+  <div class="section card hidden" id="rosterCard">
     <label class="row">
       <input type="checkbox" id="rosterToggle" />
       <span>Roster auto-blur</span>
       <span id="rosterInfo" class="muted" style="margin-left:auto"></span>
     </label>
-    <label class="row" id="pseudoRow">
+    <label class="row">
       <input type="checkbox" id="pseudoToggle" />
       <span>Pseudonymize (Student 1, 2, ...)</span>
     </label>
+    <a href="#" id="editRostersLink">Edit rosters</a>
   </div>
 
-  <p id="proHint" class="muted hidden">
-    Auto-blur whole rosters with Pro ($15 once).
-    <a href="#" id="proHintLink">Set it up</a>
-  </p>
+  <div class="section card upsell hidden" id="proCard">
+    <div class="upsell-title">Auto-blur every student name</div>
+    <p class="muted">Paste your class roster once. Pro hides every name on every page, even ones that load late.</p>
+    <div class="upsell-actions">
+      <button id="buyBtn" class="primary">Get Pro - $15 once</button>
+      <a href="#" id="haveKeyLink">Have a key?</a>
+    </div>
+  </div>
+
+  <div class="section card slim" id="siteCard">
+    <div class="site-row">
+      <span id="siteStatus" class="muted"></span>
+      <button id="clearSiteBtn" class="small" title="Remove saved blurs, areas, and title mask for this site">Clear</button>
+    </div>
+  </div>
 
   <p id="siteNote" class="muted hidden">
     This page does not allow extensions, so the tools above are off here.
@@ -71,9 +107,8 @@
 
   <footer>
     <a href="#" id="optionsLink">Options</a>
-    <button id="clearSiteBtn" title="Remove saved blurs, areas, and title mask for this site">Clear this site</button>
+    <span class="keys">Picker <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> &middot; Panic <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd></span>
   </footer>
-  <p class="keys">Picker <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> &nbsp; Panic <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd></p>
 
   <script src="shared.js"></script>
   <script src="popup.js"></script>

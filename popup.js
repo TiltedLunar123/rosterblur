@@ -7,6 +7,8 @@
 
   let tabId = null;
   let tabState = null; // from the content script, null when unreachable
+  let pro = false;
+  let clearTimer = null;
 
   const sendToTab = (msg) =>
     new Promise((resolve) => {
@@ -21,7 +23,30 @@
       }
     });
 
-  const setToggleButton = (btn, on) => btn.classList.toggle("active", !!on);
+  const setToggleButton = (btn, on) => {
+    btn.classList.toggle("active", !!on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+  };
+
+  const plural = (n, word) => n + " " + word + (n === 1 ? "" : "s");
+
+  const siteStatusText = () => {
+    const c = (tabState && tabState.counts) || {};
+    const parts = [];
+    if (pro && c.names) parts.push(plural(c.names, "name") + " hidden");
+    if (c.selectors) parts.push(plural(c.selectors, "element"));
+    if (c.areas) parts.push(plural(c.areas, "area"));
+    if (tabState && tabState.mask) parts.push("title masked");
+    return parts.length ? "On this site: " + parts.join(", ") : "Nothing blurred here yet";
+  };
+
+  const resetClearButton = () => {
+    clearTimeout(clearTimer);
+    const btn = $("clearSiteBtn");
+    btn.textContent = "Clear";
+    btn.classList.remove("danger");
+    btn.dataset.armed = "";
+  };
 
   const refreshButtons = () => {
     const reachable = !!tabState;
@@ -29,11 +54,13 @@
       $(id).disabled = !reachable;
     }
     $("siteNote").classList.toggle("hidden", reachable);
+    $("siteCard").classList.toggle("hidden", !reachable);
     if (!tabState) return;
     setToggleButton($("pickerBtn"), tabState.picking);
     setToggleButton($("panicBtn"), tabState.panic);
     setToggleButton($("maskBtn"), tabState.mask);
     $("meetingBadge").classList.toggle("hidden", !tabState.meetingActive);
+    $("siteStatus").textContent = siteStatusText();
   };
 
   const command = (name) => async () => {
@@ -53,19 +80,19 @@
       RB.storageGet([RB.STORAGE.PRO_FLAG]),
       RB.getRosters()
     ]);
-    const pro = !!flags[RB.STORAGE.PRO_FLAG];
+    pro = !!flags[RB.STORAGE.PRO_FLAG];
     const names = RB.enabledNames(rosters);
 
     $("blurRange").value = settings.blurPx;
     $("blurOut").textContent = settings.blurPx + "px";
     $("proBadge").classList.toggle("hidden", !pro);
     $("rosterCard").classList.toggle("hidden", !pro);
-    $("proHint").classList.toggle("hidden", pro);
+    $("proCard").classList.toggle("hidden", pro);
     if (pro) {
       $("rosterToggle").checked = settings.rosterEnabled;
       $("pseudoToggle").checked = settings.pseudonymize;
       $("rosterInfo").textContent = names.length
-        ? names.length + " name" + (names.length === 1 ? "" : "s")
+        ? plural(names.length, "name")
         : "no names yet";
     }
 
@@ -101,7 +128,18 @@
     saveSettingsPatch({ pseudonymize: $("pseudoToggle").checked });
   });
 
+  // Clearing wipes this site's saved blurs, so it asks for a second
+  // click; the armed state falls back to normal after a moment.
   $("clearSiteBtn").addEventListener("click", async () => {
+    const btn = $("clearSiteBtn");
+    if (!btn.dataset.armed) {
+      btn.dataset.armed = "1";
+      btn.textContent = "Confirm";
+      btn.classList.add("danger");
+      clearTimer = setTimeout(resetClearButton, 3000);
+      return;
+    }
+    resetClearButton();
     await sendToTab({ type: "rb-clear-site" });
     tabState = await sendToTab({ type: "rb-get-state" });
     refreshButtons();
@@ -112,7 +150,15 @@
     chrome.runtime.openOptionsPage();
   };
   $("optionsLink").addEventListener("click", openOptions);
-  $("proHintLink").addEventListener("click", openOptions);
+  $("editRostersLink").addEventListener("click", openOptions);
+
+  $("buyBtn").addEventListener("click", () => {
+    chrome.tabs.create({ url: RB.license.PRO.BUY_URL });
+  });
+  $("haveKeyLink").addEventListener("click", (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: chrome.runtime.getURL("options.html#pro") });
+  });
 
   init();
 })();

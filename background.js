@@ -94,5 +94,11 @@ const resetTransient = async () => {
   await refreshProFlag();
 };
 
-chrome.runtime.onInstalled.addListener(() => { resetTransient(); });
+chrome.runtime.onInstalled.addListener((details) => {
+  resetTransient();
+  // First install only: open the options page once so setup is obvious.
+  if (details && details.reason === "install") {
+    try { chrome.runtime.openOptionsPage(); } catch { /* no UI available */ }
+  }
+});
 chrome.runtime.onStartup.addListener(() => { resetTransient(); });

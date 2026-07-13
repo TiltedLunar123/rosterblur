@@ -1,4 +1,5 @@
-// Options page: roster management, matching settings, license.
+// Options page: roster management, matching settings, license, and the
+// roster-blur demo shown to free users.
 
 (() => {
   "use strict";
@@ -31,6 +32,10 @@
     settings = { ...settings, ...patch, patterns: { ...settings.patterns, ...(patch.patterns || {}) } };
     await RB.storageSet({ [RB.STORAGE.SETTINGS]: settings });
     flashSaved();
+  };
+
+  const openBuy = () => {
+    chrome.tabs.create({ url: RB.license.PRO.BUY_URL });
   };
 
   // =========================
@@ -117,22 +122,59 @@
   };
 
   // =========================
+  // Roster-blur demo (free users)
+  // =========================
+  // A sample gradebook rendered right on this page so the value of
+  // roster auto-blur is visible before buying. Names are fictional.
+
+  const DEMO_STUDENTS = [
+    ["Jordan Smith", "A-"],
+    ["Maria Garcia", "B+"],
+    ["Jose Martinez", "A"],
+    ["May Chen", "B"],
+    ["Priya Patel", "A"]
+  ];
+
+  let demoMode = "blur";
+
+  const renderDemo = () => {
+    const tbody = $("demoBody");
+    tbody.textContent = "";
+    DEMO_STUDENTS.forEach(([name, grade], i) => {
+      const tr = document.createElement("tr");
+      const nameCell = document.createElement("td");
+      if (demoMode === "pseudo") {
+        nameCell.textContent = "Student " + (i + 1);
+      } else {
+        const span = document.createElement("span");
+        span.textContent = name;
+        if (demoMode === "blur") span.className = "demo-blur";
+        nameCell.appendChild(span);
+      }
+      const gradeCell = document.createElement("td");
+      gradeCell.textContent = grade;
+      tr.append(nameCell, gradeCell);
+      tbody.appendChild(tr);
+    });
+    for (const btn of document.querySelectorAll("#demoModes button")) {
+      const on = btn.dataset.mode === demoMode;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    }
+  };
+
+  // =========================
   // Pro gating
   // =========================
 
   const applyProUi = () => {
     $("proBadge").classList.toggle("hidden", !pro);
+    $("headerCta").classList.toggle("hidden", pro);
     $("rosterLock").classList.toggle("hidden", pro);
-    $("rosterLockNote").classList.toggle("hidden", pro);
+    $("rosterEditor").classList.toggle("hidden", !pro);
+    $("rosterDemo").classList.toggle("hidden", pro);
+    $("proPitch").classList.toggle("hidden", pro);
     $("buyRow").classList.toggle("hidden", pro);
-    const gated = [
-      "addRosterBtn", "importCsvBtn", "standaloneToggle", "pseudoToggle",
-      "patEmail", "patPhone", "patId"
-    ];
-    for (const id of gated) $(id).disabled = !pro;
-    for (const el of document.querySelectorAll("#rosterList input, #rosterList textarea, #rosterList button")) {
-      el.disabled = !pro;
-    }
   };
 
   // =========================
@@ -194,6 +236,18 @@
   };
 
   // =========================
+  // Deep link (#pro)
+  // =========================
+
+  const flashPro = () => {
+    const el = $("pro");
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    el.classList.remove("flash");
+    void el.offsetWidth; // restart the animation
+    el.classList.add("flash");
+  };
+
+  // =========================
   // Boot
   // =========================
 
@@ -210,6 +264,7 @@
     $("patId").checked = settings.patterns.studentId;
 
     renderRosters();
+    renderDemo();
     await refreshLicenseUi();
 
     $("blurRange").addEventListener("input", () => {
@@ -230,12 +285,23 @@
       $("csvFile").value = "";
     });
 
-    $("buyBtn").addEventListener("click", () => {
-      chrome.tabs.create({ url: RB.license.PRO.BUY_URL });
+    $("demoModes").addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-mode]");
+      if (!btn) return;
+      demoMode = btn.dataset.mode;
+      renderDemo();
     });
+
+    $("buyBtn").addEventListener("click", openBuy);
+    $("demoBuyBtn").addEventListener("click", openBuy);
     $("activateBtn").addEventListener("click", activate);
     $("keyInput").addEventListener("keydown", (e) => {
       if (e.key === "Enter") activate();
+    });
+
+    if (location.hash === "#pro") setTimeout(flashPro, 150);
+    window.addEventListener("hashchange", () => {
+      if (location.hash === "#pro") flashPro();
     });
   };
 
