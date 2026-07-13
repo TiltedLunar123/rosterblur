@@ -40,7 +40,36 @@ Your rosters never leave your computer. They live in local browser storage, and 
 
 ## Permissions justification (for the store's privacy tab)
 
-RosterBlur asks for the storage permission so your settings, per-site blur lists, and rosters can be saved in local browser storage. It runs a content script on all sites because a blur tool has to work on whatever page you happen to be sharing; a teacher's day moves between the gradebook, the LMS, and email, and the next page is never predictable. The extension sends no data anywhere. There are no analytics and no network requests of any kind, which you can verify in the source. Keyboard shortcuts use the commands API. Nothing else is requested.
+### storage
+
+RosterBlur asks for the storage permission so your settings, per-site blur
+lists, and rosters can be saved in local browser storage. That is the only
+place they exist; the extension sends no data anywhere.
+
+### scripting
+
+RosterBlur's blur tools are driven by its content script. Content scripts
+declared in the manifest only attach to pages that load after the extension
+starts, so any tab already open when RosterBlur is installed or updated has
+no working blur tools until that page is refreshed. The scripting permission
+is used for exactly one thing: injecting the same two content script files
+already declared in the manifest (shared.js and contentScript.js) into tabs
+that were open during an install or update, and into the current tab from
+the popup when the script is not yet running there. No other code is ever
+injected, no code is fetched or executed from a server, and the extension
+makes zero network requests.
+
+### Host permission (all sites)
+
+Teachers use RosterBlur on whatever page they are about to share:
+gradebooks, LMS pages, email, spreadsheets. Which site that is cannot be
+known in advance, so the content script matches all URLs. Broad host access
+is also required by chrome.scripting.executeScript to inject that same
+content script into tabs that were already open at install or update time.
+The extension reads page text only to find and blur roster names, keeps all
+data in local browser storage, and makes no network requests of any kind.
+
+Keyboard shortcuts use the commands API. Nothing else is requested.
 
 ## Single purpose description (store review field)
 
