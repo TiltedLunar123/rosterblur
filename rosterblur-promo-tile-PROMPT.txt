@@ -1,0 +1,19 @@
+PROMPT (paste into your image generator):
+
+Wide promotional banner for a teacher privacy browser extension. Left side: a
+clean flat-design laptop mockup showing a simple gradebook table where the
+student name column is softly blurred out while the grades column stays sharp.
+Right side: generous empty dark space for a headline to be added later. Style:
+deep indigo-black #171238 background with soft lavender #a5b4fc UI line art and
+one mint #6ee7b7 accent glow, modern SaaS marketing illustration, flat vector
+shapes with subtle depth, calm and trustworthy mood, high contrast, crisp
+edges. No real names, no readable text anywhere, no letters, no words, no
+watermark, no photorealism, no people.
+
+SETTINGS: 1400x560 (Chrome Web Store small promo tile), or generate 16:9 at
+high resolution and crop to 1400x560.
+
+AFTER GENERATING: save into Downloads as rosterblur-promo-tile.png. Add the
+headline "Blur student names before you share your screen" in a bold clean
+sans-serif (white) over the empty right side using any editor, keeping 40px
+margins. The store also accepts a 440x280 small tile: downscale a center crop.

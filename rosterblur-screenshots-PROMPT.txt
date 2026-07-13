@@ -1,0 +1,32 @@
+STORE SCREENSHOTS (1280x800 each, up to 5)
+
+Real screenshots beat generated art for extension listings, and the repo
+already produces them. Recommended set, in this order:
+
+1. docs/e2e-gradebook-roster-blur.png - roster auto-blur on a gradebook
+   (names, emails, IDs, phones blurred; grades readable)
+2. docs/e2e-gradebook-pseudonymize.png - pseudonymize mode (Student 1..8)
+3. docs/e2e-spa-dynamic-blur.png - live page that re-renders, still blurred
+4. docs/popup.png - the popup controls (composite onto a 1280x800 canvas)
+5. docs/e2e-panic.png - panic blur
+
+Each store screenshot wants a short caption strip. Compose in any editor:
+1280x800 canvas, screenshot centered with a 24px deep indigo #171238 border,
+caption bar at top in white bold sans-serif on #171238:
+
+  1. "Paste your roster once. Names blur everywhere."
+  2. "Or replace names with Student 1, Student 2, ..."
+  3. "Keeps up with live apps like Classroom and PowerSchool"
+  4. "Click to blur anything. One hotkey hides everything."
+  5. "Panic blur: Alt+Shift+H"
+
+IF GENERATED ART IS STILL WANTED (paste into your image generator):
+
+Flat vector illustration, 16:10, a friendly classroom projector scene from
+behind the teacher: a laptop in the foreground showing a simple table with its
+name column blurred into soft pills, projected onto a big screen in front of a
+class, deep indigo #171238 palette with lavender #a5b4fc lines and one mint
+#6ee7b7 accent, modern SaaS illustration style, no readable text, no letters,
+no real faces (back of heads only), no watermark, no photorealism.
+
+SETTINGS: 1280x800.

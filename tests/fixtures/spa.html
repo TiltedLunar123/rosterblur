@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Live Attendance Board</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; color: #111827; }
+    .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; margin: 8px 0; max-width: 480px; }
+    .name { font-weight: 600; }
+    .meta { color: #6b7280; font-size: 13px; }
+    h1 { font-size: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Attendance (re-renders itself like a SPA)</h1>
+  <p class="meta">This page rebuilds its list from scratch on a timer, the way
+  React-style apps do. Names arriving after page load must still get blurred.</p>
+  <div id="app"></div>
+
+  <script>
+    // Simulates an SPA: wipes and re-renders the whole list every 700 ms,
+    // adding one more student each round.
+    const ROSTER = [
+      ["Jordan Smith", "arrived 8:02"],
+      ["Maria Garcia", "arrived 8:04"],
+      ["José Martínez", "arrived 8:05"],
+      ["Zoë Brontë", "arrived 8:07"],
+      ["May Chen", "arrived 8:09"],
+      ["DeShawn Williams", "arrived 8:11"],
+      ["Priya Patel", "arrived 8:12"]
+    ];
+    let shown = 1;
+    let renders = 0;
+
+    function render() {
+      renders += 1;
+      const app = document.getElementById("app");
+      app.replaceChildren();
+      for (let i = 0; i < shown; i++) {
+        const card = document.createElement("div");
+        card.className = "card";
+        const name = document.createElement("div");
+        name.className = "name";
+        name.textContent = ROSTER[i][0];
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.textContent = ROSTER[i][1] + " (render #" + renders + ")";
+        card.append(name, meta);
+        app.appendChild(card);
+      }
+      if (shown < ROSTER.length) shown += 1;
+    }
+
+    render();
+    setInterval(render, 700);
+  </script>
+</body>
+</html>

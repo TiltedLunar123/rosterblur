@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="shared.css" />
+  <style>
+    body { width: 300px; padding: 12px; }
+    header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    header img { width: 22px; height: 22px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .grid button { width: 100%; }
+    .section { margin-top: 12px; }
+    .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+    .slider-row output { min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
+    footer { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
+    .keys { font-size: 11px; color: var(--muted); }
+    kbd {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0 4px;
+      font-size: 10px;
+    }
+    #siteNote { margin-top: 8px; }
+    #proHint { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icons/icon32.png" alt="" />
+    <h1>RosterBlur</h1>
+    <span id="proBadge" class="pill pro hidden">PRO</span>
+    <span id="meetingBadge" class="pill pro hidden">MEETING</span>
+  </header>
+
+  <div class="grid">
+    <button id="pickerBtn">Blur picker</button>
+    <button id="areaBtn">Blur an area</button>
+    <button id="panicBtn">Panic blur</button>
+    <button id="maskBtn">Mask tab title</button>
+  </div>
+
+  <div class="section">
+    <span class="muted">Blur strength</span>
+    <div class="slider-row">
+      <input type="range" id="blurRange" min="4" max="16" step="1" />
+      <output id="blurOut">8px</output>
+    </div>
+  </div>
+
+  <div class="section card" id="rosterCard">
+    <label class="row">
+      <input type="checkbox" id="rosterToggle" />
+      <span>Roster auto-blur</span>
+      <span id="rosterInfo" class="muted" style="margin-left:auto"></span>
+    </label>
+    <label class="row" id="pseudoRow">
+      <input type="checkbox" id="pseudoToggle" />
+      <span>Pseudonymize (Student 1, 2, ...)</span>
+    </label>
+  </div>
+
+  <p id="proHint" class="muted hidden">
+    Auto-blur whole rosters with Pro ($15 once).
+    <a href="#" id="proHintLink">Set it up</a>
+  </p>
+
+  <p id="siteNote" class="muted hidden">
+    This page does not allow extensions, so the tools above are off here.
+  </p>
+
+  <footer>
+    <a href="#" id="optionsLink">Options</a>
+    <button id="clearSiteBtn" title="Remove saved blurs, areas, and title mask for this site">Clear this site</button>
+  </footer>
+  <p class="keys">Picker <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> &nbsp; Panic <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd></p>
+
+  <script src="shared.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
