@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.1.0
+
+UI and onboarding refresh. No changes to blurring behavior, matching,
+storage, or the license format.
+
+- Popup: clearer tool names with icons, a per-site status line showing
+  what is blurred, a two-step confirm on "Clear this site", and a
+  direct Pro checkout button for free users
+- Options: a short setup guide, a live roster-blur preview on a sample
+  gradebook for free users, and a clearer Pro section with the full
+  feature list and one-time pricing
+- The options page opens once after install
+- Deep link support: the popup's "Have a key?" jumps straight to the
+  license section
+
 ## 1.0.0
 
 Initial release.

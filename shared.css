@@ -4,7 +4,9 @@
   --bg: #12102a;
   --surface: #1c1940;
   --surface2: #262254;
+  --surface3: #2e2966;
   --border: rgba(165, 180, 252, 0.18);
+  --border-strong: rgba(165, 180, 252, 0.35);
   --text: #e5e7ff;
   --muted: #9d9bc4;
   --accent: #a5b4fc;
@@ -39,21 +41,29 @@ button {
   border-radius: 8px;
   padding: 7px 12px;
   cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
-button:hover { background: #2e2966; }
+button:hover { background: var(--surface3); }
 button.primary {
   background: var(--accent-strong);
   border-color: var(--accent-strong);
   color: #0e0c22;
   font-weight: 600;
 }
-button.primary:hover { background: var(--accent); }
+button.primary:hover { background: var(--accent); border-color: var(--accent); }
 button.active {
   background: rgba(110, 231, 183, 0.15);
   border-color: var(--mint);
   color: var(--mint);
 }
+button.danger { border-color: var(--danger); color: var(--danger); }
+button.small { padding: 4px 10px; font-size: 12px; border-radius: 7px; }
 button:disabled { opacity: 0.45; cursor: default; }
+
+:is(button, a, input, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 
 input[type="text"], textarea {
   font: inherit;
@@ -96,5 +106,32 @@ label.row {
 .pill.locked { background: rgba(165, 180, 252, 0.12); color: var(--accent); }
 
 a { color: var(--accent); }
+
+kbd {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-family: inherit;
+}
+
+/* Pro feature checklist */
+.features { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.features li { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; }
+.features svg { flex: none; width: 15px; height: 15px; color: var(--mint); margin-top: 2px; }
+
+/* Segmented control */
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: transparent; padding: 5px 12px; font-size: 12.5px; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.active { background: var(--surface3); color: var(--mint); }
+
+/* One-shot attention pulse (used when deep-linking to a section) */
+@keyframes rb-flash {
+  0% { box-shadow: 0 0 0 0 rgba(165, 180, 252, 0.5); }
+  100% { box-shadow: 0 0 0 16px rgba(165, 180, 252, 0); }
+}
+.flash { animation: rb-flash 0.8s ease-out 2; }
 
 .hidden { display: none !important; }

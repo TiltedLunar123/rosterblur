@@ -8,15 +8,27 @@
     body { max-width: 760px; margin: 0 auto; padding: 28px 20px 60px; }
     header { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
     header img { width: 36px; height: 36px; }
+    #headerCta {
+      margin-left: auto;
+      background: var(--accent-strong);
+      color: #0e0c22;
+      font-weight: 600;
+      font-size: 12.5px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+    #headerCta:hover { background: var(--accent); }
     .tagline { margin: 0 0 22px; }
     section { margin-top: 26px; }
+    .setup { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+    .setup li { font-size: 13px; }
     .roster-card { margin-top: 12px; }
     .roster-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
     .roster-head input[type="text"] { max-width: 240px; }
     .roster-head .spacer { flex: 1; }
     .roster-count { font-size: 12px; color: var(--muted); white-space: nowrap; }
     .toolbar { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
-    .locknote { margin-top: 8px; }
     #saveFlash { color: var(--mint); font-size: 12.5px; opacity: 0; transition: opacity 0.2s; }
     #saveFlash.show { opacity: 1; }
     .license-row { display: flex; gap: 8px; margin-top: 10px; }
@@ -27,6 +39,44 @@
     .slider-row { display: flex; align-items: center; gap: 12px; max-width: 340px; }
     .slider-row output { min-width: 40px; text-align: right; }
     .patterns label.row { padding-left: 4px; }
+
+    /* Live demo (free users) */
+    .demo { background: #f5f6fa; color: #1f2937; border-radius: 8px; padding: 8px 10px; }
+    .demo table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .demo th, .demo td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #e2e4ee; }
+    .demo th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; }
+    .demo tr:last-child td { border-bottom: 0; }
+    .demo-blur { filter: blur(5px); }
+    .demo-controls { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+    .demo-cta { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+    .demo-cta a { font-size: 12.5px; }
+
+    /* Pro pitch */
+    .pro-grid { display: grid; grid-template-columns: 1fr 210px; gap: 18px; align-items: start; }
+    @media (max-width: 620px) { .pro-grid { grid-template-columns: 1fr; } }
+    .price-box {
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+      background: var(--surface2);
+    }
+    .price { font-size: 30px; font-weight: 700; line-height: 1.1; }
+    .price-box .muted { display: block; margin-top: 5px; }
+    .steps { display: flex; gap: 16px; margin: 16px 0 14px; flex-wrap: wrap; }
+    .step { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--muted); }
+    .step b {
+      background: var(--surface3);
+      color: var(--accent);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11.5px;
+      flex: none;
+    }
     footer { margin-top: 40px; }
   </style>
 </head>
@@ -35,6 +85,7 @@
     <img src="icons/icon48.png" alt="" />
     <h1>RosterBlur</h1>
     <span id="proBadge" class="pill pro hidden">PRO ACTIVE</span>
+    <a href="#pro" id="headerCta" class="hidden">Get Pro</a>
   </header>
   <p class="tagline muted">
     Blur student names before you share your screen. Everything runs on this
@@ -42,10 +93,19 @@
     browser storage and are never sent anywhere.
   </p>
 
+  <section class="card" id="quickStart">
+    <h2>Get set up</h2>
+    <ol class="setup">
+      <li>Pin RosterBlur: click the puzzle piece next to the address bar, then the pin.</li>
+      <li>On any page, press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> and click anything to blur it. Blurs stick per site.</li>
+      <li>Presenting a gradebook or LMS? Add a class roster below and every name gets blurred for you.</li>
+    </ol>
+  </section>
+
   <section class="card">
     <h2>Blur strength</h2>
     <div class="slider-row">
-      <input type="range" id="blurRange" min="4" max="16" step="1" />
+      <input type="range" id="blurRange" min="4" max="16" step="1" aria-label="Blur strength" />
       <output id="blurOut">8px</output>
     </div>
     <p class="muted" style="margin-bottom:0">
@@ -55,74 +115,118 @@
 
   <section class="card" id="rosterSection">
     <h2>Class rosters <span id="rosterLock" class="pill locked hidden">PRO</span></h2>
-    <p class="muted">
-      One name per line ("First Last" or "Last, First"). Any visible occurrence
-      of a roster name is blurred on every page while roster blur is on.
-      Rosters are stored only in this browser's local storage.
-    </p>
-    <div id="rosterList"></div>
-    <div class="toolbar">
-      <button id="addRosterBtn">Add roster</button>
-      <button id="importCsvBtn">Import CSV</button>
-      <input type="file" id="csvFile" accept=".csv,text/csv" class="hidden" />
-      <span id="saveFlash">Saved</span>
-    </div>
-    <p class="locknote muted hidden" id="rosterLockNote">
-      Roster auto-blur, pseudonymize, pattern detection, and meeting mode are
-      part of Pro.
-    </p>
 
-    <div style="margin-top:16px">
-      <label class="row">
-        <input type="checkbox" id="standaloneToggle" />
-        <span>Also match standalone first or last names (more coverage, more false positives)</span>
-      </label>
-      <label class="row">
-        <input type="checkbox" id="pseudoToggle" />
-        <span>Pseudonymize: show "Student 1", "Student 2", ... instead of a blur</span>
-      </label>
-    </div>
-
-    <div class="patterns" style="margin-top:14px">
-      <h2 style="font-size:13px">Auto-detect patterns</h2>
-      <label class="row"><input type="checkbox" id="patEmail" /> <span>Email addresses</span></label>
-      <label class="row"><input type="checkbox" id="patPhone" /> <span>Phone numbers</span></label>
-      <label class="row"><input type="checkbox" id="patId" /> <span>Long ID numbers (5 to 10 digits)</span></label>
-    </div>
-
-    <div style="margin-top:14px">
-      <h2 style="font-size:13px">Meeting mode</h2>
-      <p class="muted" style="margin:0">
-        When a Google Meet, Zoom, or Teams tab is open, roster blur switches on
-        across all tabs automatically and a small indicator shows on each page.
-        No setup needed.
+    <div id="rosterEditor" class="hidden">
+      <p class="muted">
+        One name per line ("First Last" or "Last, First"). Any visible occurrence
+        of a roster name is blurred on every page while roster blur is on.
+        Rosters are stored only in this browser's local storage.
       </p>
+      <div id="rosterList"></div>
+      <div class="toolbar">
+        <button id="addRosterBtn">Add roster</button>
+        <button id="importCsvBtn">Import CSV</button>
+        <input type="file" id="csvFile" accept=".csv,text/csv" class="hidden" />
+        <span id="saveFlash">Saved</span>
+      </div>
+
+      <div style="margin-top:16px">
+        <label class="row">
+          <input type="checkbox" id="standaloneToggle" />
+          <span>Also match standalone first or last names (more coverage, more false positives)</span>
+        </label>
+        <label class="row">
+          <input type="checkbox" id="pseudoToggle" />
+          <span>Pseudonymize: show "Student 1", "Student 2", ... instead of a blur</span>
+        </label>
+      </div>
+
+      <div class="patterns" style="margin-top:14px">
+        <h2 style="font-size:13px">Auto-detect patterns</h2>
+        <label class="row"><input type="checkbox" id="patEmail" /> <span>Email addresses</span></label>
+        <label class="row"><input type="checkbox" id="patPhone" /> <span>Phone numbers</span></label>
+        <label class="row"><input type="checkbox" id="patId" /> <span>Long ID numbers (5 to 10 digits)</span></label>
+      </div>
+
+      <div style="margin-top:14px">
+        <h2 style="font-size:13px">Meeting mode</h2>
+        <p class="muted" style="margin:0">
+          When a Google Meet, Zoom, or Teams tab is open, roster blur switches on
+          across all tabs automatically and a small indicator shows on each page.
+          No setup needed.
+        </p>
+      </div>
+    </div>
+
+    <div id="rosterDemo" class="hidden">
+      <p class="muted" style="margin-top:0">
+        Paste your class roster once and every name disappears from every page,
+        even content that loads late. Try it on this sample gradebook:
+      </p>
+      <div class="demo">
+        <table aria-label="Sample gradebook">
+          <thead><tr><th>Student</th><th>Grade</th></tr></thead>
+          <tbody id="demoBody"></tbody>
+        </table>
+      </div>
+      <div class="demo-controls">
+        <span class="muted">Preview:</span>
+        <div class="seg" id="demoModes" role="group" aria-label="Preview mode">
+          <button data-mode="blur" class="active" aria-pressed="true">Blur</button>
+          <button data-mode="pseudo" aria-pressed="false">Student 1, 2, ...</button>
+          <button data-mode="off" aria-pressed="false">Off</button>
+        </div>
+      </div>
+      <div class="demo-cta">
+        <button id="demoBuyBtn" class="primary">Get Pro - $15 once</button>
+        <a href="#pro" id="seeProLink">See everything included</a>
+      </div>
     </div>
   </section>
 
-  <section class="card">
-    <h2>Pro license</h2>
-    <p class="muted">
-      Pro is a one-time $15 purchase. The key is verified on this device with a
-      built-in public key; the extension never contacts a server.
-    </p>
+  <section class="card" id="pro">
+    <h2>RosterBlur Pro</h2>
+
+    <div id="proPitch" class="hidden">
+      <div class="pro-grid">
+        <ul class="features">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Roster auto-blur on every page, including content that loads or re-renders late</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Pseudonymize: stable "Student 1", "Student 2" labels instead of a blur</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Auto-detect and blur emails, phone numbers, and long ID numbers</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>CSV roster import and multiple class rosters with toggles</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Meeting mode: switches on by itself when Meet, Zoom, or Teams opens</span></li>
+        </ul>
+        <div class="price-box">
+          <div class="price">$15</div>
+          <span class="muted">one-time purchase</span>
+          <span class="muted">No subscription. No account. Yours for good.</span>
+        </div>
+      </div>
+      <div class="steps">
+        <span class="step"><b>1</b><span>Pay through Stripe checkout</span></span>
+        <span class="step"><b>2</b><span>Your key appears on the confirmation page</span></span>
+        <span class="step"><b>3</b><span>Paste it below</span></span>
+      </div>
+    </div>
+
     <div id="buyRow">
-      <button id="buyBtn" class="primary">Buy Pro - $15 lifetime</button>
-      <span class="muted" style="margin-left:8px">Opens Stripe checkout in a new tab.</span>
+      <button id="buyBtn" class="primary">Get Pro - $15 once</button>
+      <span class="muted" style="margin-left:8px">Secure checkout by Stripe, opens in a new tab.</span>
     </div>
     <div class="license-row">
-      <input type="text" id="keyInput" placeholder="Paste your RB1... key" spellcheck="false" />
+      <input type="text" id="keyInput" placeholder="Paste your RB1... key" spellcheck="false" aria-label="License key" />
       <button id="activateBtn">Activate</button>
     </div>
     <p id="licenseStatus" class="muted"></p>
     <p class="muted" style="margin-bottom:0">
-      Lost your key? Reopen the link Stripe sent you to after checkout; it
-      re-issues the same key any time.
+      The key is verified on this device with a built-in public key; the
+      extension never contacts a server. Lost your key? Reopen the confirmation
+      link from Stripe; it shows the same key any time.
     </p>
   </section>
 
   <section class="card">
-    <h2>Shortcuts and tips</h2>
+    <h2>Shortcuts and privacy</h2>
     <p class="muted" style="margin-top:0">
       Alt+Shift+B toggles the click-to-blur picker. Alt+Shift+H is the panic
       blur that hides the whole page. Change both at chrome://extensions/shortcuts.
@@ -130,14 +234,15 @@
       re-apply when you come back.
     </p>
     <p class="muted" style="margin-bottom:0">
-      RosterBlur helps you protect student information while screen sharing.
-      It is a visual privacy tool, not a compliance product, and does not make
-      you or your school FERPA compliant on its own.
+      RosterBlur makes zero network requests. It helps you protect student
+      information while screen sharing; it is a visual privacy tool, not a
+      compliance product, and does not make you or your school FERPA compliant
+      on its own.
     </p>
   </section>
 
   <footer class="muted">
-    RosterBlur makes zero network requests. Questions:
+    Questions or issues:
     <a href="https://github.com/TiltedLunar123/rosterblur">github.com/TiltedLunar123/rosterblur</a>
   </footer>
 
