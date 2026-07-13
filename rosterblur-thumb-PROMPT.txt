@@ -1,0 +1,27 @@
+PROMPT (paste into your image generator):
+
+YouTube thumbnail illustration, 16:9. A close-up flat vector laptop screen
+showing a school gradebook table where the student name column is smudged into
+soft frosted blur pills while grades stay sharp, tilted slightly for depth. A
+large glowing mint #6ee7b7 shield floats over the corner of the screen. Behind
+the laptop, a dark indigo-black #171238 classroom hinted with a faint
+projector light beam in lavender #a5b4fc. Left third of the frame kept dark
+and empty for a headline to be added later. Bold modern SaaS illustration
+style, dramatic contrast, crisp edges, saturated accent glow, reads clearly at
+tiny sizes. No text, no letters, no words, no numbers, no watermark, no
+photorealism, no faces.
+
+VARIANT B (punchier, if A is flat):
+
+YouTube thumbnail illustration, 16:9, extreme close-up of one roster row where
+a glowing frosted blur pill is sliding across a student name like a censor
+bar, mint #6ee7b7 shield icon at its tip, deep indigo #171238 background with
+lavender #a5b4fc UI lines, dramatic rim lighting, bold flat vector style, high
+contrast, no text, no letters, no watermark, no photorealism.
+
+SETTINGS: 16:9, 1280x720 or larger.
+
+AFTER GENERATING: save into Downloads as rosterblur-thumb.png and say
+"process the thumbnail". It gets resized to exactly 1280x720, metadata
+stripped, and the headline "HIDE STUDENT NAMES" composited in bold white over
+the empty area.
