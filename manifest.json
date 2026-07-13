@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "RosterBlur: Blur Student Names on Screen",
+  "short_name": "RosterBlur",
+  "version": "1.0.0",
+  "description": "Blur student names before you share your screen. Click to blur anything, auto-blur whole rosters. 100 percent local and private.",
+  "minimum_chrome_version": "110",
+  "permissions": ["storage"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["shared.js", "contentScript.js"],
+      "run_at": "document_end",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "RosterBlur",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "options_page": "options.html",
+  "commands": {
+    "toggle-picker": {
+      "suggested_key": { "default": "Alt+Shift+B" },
+      "description": "Toggle the click-to-blur picker"
+    },
+    "panic-blur": {
+      "suggested_key": { "default": "Alt+Shift+H" },
+      "description": "Panic: blur the entire page"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'"
+  }
+}

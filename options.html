@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RosterBlur Options</title>
+  <link rel="stylesheet" href="shared.css" />
+  <style>
+    body { max-width: 760px; margin: 0 auto; padding: 28px 20px 60px; }
+    header { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+    header img { width: 36px; height: 36px; }
+    .tagline { margin: 0 0 22px; }
+    section { margin-top: 26px; }
+    .roster-card { margin-top: 12px; }
+    .roster-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .roster-head input[type="text"] { max-width: 240px; }
+    .roster-head .spacer { flex: 1; }
+    .roster-count { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .toolbar { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+    .locknote { margin-top: 8px; }
+    #saveFlash { color: var(--mint); font-size: 12.5px; opacity: 0; transition: opacity 0.2s; }
+    #saveFlash.show { opacity: 1; }
+    .license-row { display: flex; gap: 8px; margin-top: 10px; }
+    .license-row input { flex: 1; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+    #licenseStatus { margin-top: 10px; }
+    #licenseStatus.ok { color: var(--mint); }
+    #licenseStatus.bad { color: var(--danger); }
+    .slider-row { display: flex; align-items: center; gap: 12px; max-width: 340px; }
+    .slider-row output { min-width: 40px; text-align: right; }
+    .patterns label.row { padding-left: 4px; }
+    footer { margin-top: 40px; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icons/icon48.png" alt="" />
+    <h1>RosterBlur</h1>
+    <span id="proBadge" class="pill pro hidden">PRO ACTIVE</span>
+  </header>
+  <p class="tagline muted">
+    Blur student names before you share your screen. Everything runs on this
+    device: your rosters, your settings, and your license key stay in local
+    browser storage and are never sent anywhere.
+  </p>
+
+  <section class="card">
+    <h2>Blur strength</h2>
+    <div class="slider-row">
+      <input type="range" id="blurRange" min="4" max="16" step="1" />
+      <output id="blurOut">8px</output>
+    </div>
+    <p class="muted" style="margin-bottom:0">
+      Applies to click-to-blur, area blur, and roster blur everywhere.
+    </p>
+  </section>
+
+  <section class="card" id="rosterSection">
+    <h2>Class rosters <span id="rosterLock" class="pill locked hidden">PRO</span></h2>
+    <p class="muted">
+      One name per line ("First Last" or "Last, First"). Any visible occurrence
+      of a roster name is blurred on every page while roster blur is on.
+      Rosters are stored only in this browser's local storage.
+    </p>
+    <div id="rosterList"></div>
+    <div class="toolbar">
+      <button id="addRosterBtn">Add roster</button>
+      <button id="importCsvBtn">Import CSV</button>
+      <input type="file" id="csvFile" accept=".csv,text/csv" class="hidden" />
+      <span id="saveFlash">Saved</span>
+    </div>
+    <p class="locknote muted hidden" id="rosterLockNote">
+      Roster auto-blur, pseudonymize, pattern detection, and meeting mode are
+      part of Pro.
+    </p>
+
+    <div style="margin-top:16px">
+      <label class="row">
+        <input type="checkbox" id="standaloneToggle" />
+        <span>Also match standalone first or last names (more coverage, more false positives)</span>
+      </label>
+      <label class="row">
+        <input type="checkbox" id="pseudoToggle" />
+        <span>Pseudonymize: show "Student 1", "Student 2", ... instead of a blur</span>
+      </label>
+    </div>
+
+    <div class="patterns" style="margin-top:14px">
+      <h2 style="font-size:13px">Auto-detect patterns</h2>
+      <label class="row"><input type="checkbox" id="patEmail" /> <span>Email addresses</span></label>
+      <label class="row"><input type="checkbox" id="patPhone" /> <span>Phone numbers</span></label>
+      <label class="row"><input type="checkbox" id="patId" /> <span>Long ID numbers (5 to 10 digits)</span></label>
+    </div>
+
+    <div style="margin-top:14px">
+      <h2 style="font-size:13px">Meeting mode</h2>
+      <p class="muted" style="margin:0">
+        When a Google Meet, Zoom, or Teams tab is open, roster blur switches on
+        across all tabs automatically and a small indicator shows on each page.
+        No setup needed.
+      </p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Pro license</h2>
+    <p class="muted">
+      Pro is a one-time $15 purchase. The key is verified on this device with a
+      built-in public key; the extension never contacts a server.
+    </p>
+    <div id="buyRow">
+      <button id="buyBtn" class="primary">Buy Pro - $15 lifetime</button>
+      <span class="muted" style="margin-left:8px">Opens Stripe checkout in a new tab.</span>
+    </div>
+    <div class="license-row">
+      <input type="text" id="keyInput" placeholder="Paste your RB1... key" spellcheck="false" />
+      <button id="activateBtn">Activate</button>
+    </div>
+    <p id="licenseStatus" class="muted"></p>
+    <p class="muted" style="margin-bottom:0">
+      Lost your key? Reopen the link Stripe sent you to after checkout; it
+      re-issues the same key any time.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>Shortcuts and tips</h2>
+    <p class="muted" style="margin-top:0">
+      Alt+Shift+B toggles the click-to-blur picker. Alt+Shift+H is the panic
+      blur that hides the whole page. Change both at chrome://extensions/shortcuts.
+      Click-to-blur, area blurs, and the tab title mask persist per site and
+      re-apply when you come back.
+    </p>
+    <p class="muted" style="margin-bottom:0">
+      RosterBlur helps you protect student information while screen sharing.
+      It is a visual privacy tool, not a compliance product, and does not make
+      you or your school FERPA compliant on its own.
+    </p>
+  </section>
+
+  <footer class="muted">
+    RosterBlur makes zero network requests. Questions:
+    <a href="https://github.com/TiltedLunar123/rosterblur">github.com/TiltedLunar123/rosterblur</a>
+  </footer>
+
+  <script src="shared.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+/* RosterBlur extension pages (popup + options). */
+
+:root {
+  --bg: #12102a;
+  --surface: #1c1940;
+  --surface2: #262254;
+  --border: rgba(165, 180, 252, 0.18);
+  --text: #e5e7ff;
+  --muted: #9d9bc4;
+  --accent: #a5b4fc;
+  --accent-strong: #818cf8;
+  --mint: #6ee7b7;
+  --warn: #fcd34d;
+  --danger: #f87171;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+h1 { font-size: 16px; margin: 0; }
+h2 { font-size: 14px; margin: 0 0 8px; color: var(--accent); }
+
+.muted { color: var(--muted); font-size: 12.5px; }
+.mint { color: var(--mint); }
+
+button {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+button:hover { background: #2e2966; }
+button.primary {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: #0e0c22;
+  font-weight: 600;
+}
+button.primary:hover { background: var(--accent); }
+button.active {
+  background: rgba(110, 231, 183, 0.15);
+  border-color: var(--mint);
+  color: var(--mint);
+}
+button:disabled { opacity: 0.45; cursor: default; }
+
+input[type="text"], textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  width: 100%;
+}
+textarea { resize: vertical; min-height: 96px; font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; }
+
+input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-strong); }
+
+label.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 2px 8px;
+  vertical-align: middle;
+}
+.pill.pro { background: rgba(110, 231, 183, 0.15); color: var(--mint); }
+.pill.locked { background: rgba(165, 180, 252, 0.12); color: var(--accent); }
+
+a { color: var(--accent); }
+
+.hidden { display: none !important; }

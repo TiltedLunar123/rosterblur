@@ -1,0 +1,8 @@
+[build]
+  publish = "netlify/site"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/activate"
+  to = "/activate.html"
+  status = 200

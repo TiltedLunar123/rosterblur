@@ -1,0 +1,26 @@
+PROMPT (paste into your image generator):
+
+Flat vector app icon for a classroom privacy tool. A minimalist class roster
+card: three short horizontal rows of line-art text on a rounded card, where the
+middle row is covered by a soft frosted glass pill so it reads as blurred out,
+drawn in glowing soft lavender #a5b4fc line art on a deep indigo-black #171238
+rounded square tile. A tiny shield accent dot in mint #6ee7b7 at the corner of
+the card. Modern SaaS app icon style, simple bold shapes, high contrast, crisp
+clean edges, readable when shrunk to 16 pixels. Centered composition, 1:1
+square, solid background, no text, no letters, no words, no watermark, no
+photorealism, no 3D render.
+
+VARIANT B (if A looks cluttered):
+
+Flat vector app icon, a single name-tag card with its name line smudged into a
+frosted blur streak, lavender #a5b4fc line art on deep indigo #171238 rounded
+square tile, one mint #6ee7b7 accent dot, modern app icon style, simple bold
+shapes, high contrast, centered, 1:1 square, no text, no watermark, no
+photorealism.
+
+SETTINGS: 1:1 aspect ratio, 1024x1024 or larger.
+
+AFTER GENERATING: save the picture into Downloads as rosterblur-logo-v2.png
+and say "process the new rosterblur logo". It gets cropped, corner-rounded,
+and resized into icons/icon16/32/48/128.png (python tools/process-logo.py),
+then rebuild the zip with node build.js --zip.

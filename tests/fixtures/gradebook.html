@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Period 3 Gradebook - Lincoln Middle School</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; color: #1f2937; }
+    table { border-collapse: collapse; width: 100%; max-width: 900px; }
+    th, td { border: 1px solid #d1d5db; padding: 8px 12px; text-align: left; font-size: 14px; }
+    th { background: #f3f4f6; }
+    caption { text-align: left; font-size: 18px; font-weight: 600; padding-bottom: 12px; }
+    .note { max-width: 900px; margin-top: 18px; font-size: 14px; line-height: 1.6; }
+    code { background: #f3f4f6; padding: 1px 5px; border-radius: 3px; }
+    input { font: inherit; padding: 4px 8px; width: 260px; }
+  </style>
+</head>
+<body>
+  <h1>Period 3 - Algebra I</h1>
+
+  <table id="grades">
+    <caption>Q3 Grade Summary</caption>
+    <thead>
+      <tr><th>Student</th><th>Email</th><th>Student ID</th><th>Guardian Phone</th><th>Grade</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Jordan Smith</td><td>jsmith24@school.example</td><td>4471023</td><td>(586) 555-0134</td><td>A-</td></tr>
+      <tr><td>Garcia, Maria</td><td>mgarcia@school.example</td><td>4471088</td><td>586-555-0199</td><td>B+</td></tr>
+      <tr><td>José Martínez</td><td>jmartinez@school.example</td><td>4471104</td><td>(313) 555-0102</td><td>A</td></tr>
+      <tr><td>Zoë Brontë</td><td>zbronte@school.example</td><td>4471150</td><td>(248) 555-0175</td><td>B</td></tr>
+      <tr><td>May Chen</td><td>mchen@school.example</td><td>4471199</td><td>(586) 555-0110</td><td>A</td></tr>
+      <tr><td>Liam O'Brien</td><td>lobrien@school.example</td><td>4471203</td><td>(734) 555-0121</td><td>C+</td></tr>
+      <tr><td><a href="#profile">DeShawn Williams</a></td><td>dwilliams@school.example</td><td>4471244</td><td>(586) 555-0187</td><td>B-</td></tr>
+      <tr><td>Priya Patel</td><td>ppatel@school.example</td><td>4471260</td><td>(947) 555-0143</td><td>A</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <p>
+      Maybelle Chenoweth transferred in this week and is not yet on the roster.
+      The word May in "May 5 field trip" refers to the month. Class resources
+      live at <span>https://school.example/period3/maria garcia notes</span>
+      which should never be treated as a student name.
+    </p>
+    <p>
+      Code sample for the tech club: <code>const student = "Jordan Smith";</code>
+      stays readable because code blocks are exempt.
+    </p>
+    <label>Search students: <input type="text" id="searchBox" value="" /></label>
+  </div>
+</body>
+</html>
