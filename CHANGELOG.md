@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1
+
+- The popup tools no longer sit disabled on tabs that were already open
+  when the extension was installed or updated. Content scripts are now
+  injected into open tabs on install and update, and the popup injects
+  on demand as a fallback. Adds the "scripting" permission; site access
+  is unchanged (the content script already ran on all sites).
+
 ## 1.1.0
 
 UI and onboarding refresh. No changes to blurring behavior, matching,

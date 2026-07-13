@@ -101,6 +101,18 @@
       tabId = tab && tab.id ? tab.id : null;
     } catch { tabId = null; }
     tabState = await sendToTab({ type: "rb-get-state" });
+    if (!tabState && tabId !== null) {
+      // The tab predates the last install or update, so the manifest
+      // content script never attached. Inject now; restricted pages
+      // (chrome://, the web store) reject and keep the tools off.
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId, allFrames: true },
+          files: ["shared.js", "contentScript.js"]
+        });
+        tabState = await sendToTab({ type: "rb-get-state" });
+      } catch { /* page does not allow injection */ }
+    }
     refreshButtons();
   };
 
