@@ -84,6 +84,27 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 // =========================
+// Content script (re)injection
+// =========================
+// Manifest content scripts only attach to pages loaded after the
+// extension starts. Without this, every tab that was open during an
+// install or update has no content script until it is refreshed, and
+// the popup tools sit disabled there. Inject into all open tabs;
+// restricted pages (chrome://, the web store) just reject.
+
+const injectIntoOpenTabs = async () => {
+  let tabs = [];
+  try { tabs = await chrome.tabs.query({}); } catch { return; }
+  await Promise.allSettled(tabs.map((tab) => {
+    if (!tab.id) return Promise.resolve();
+    return chrome.scripting.executeScript({
+      target: { tabId: tab.id, allFrames: true },
+      files: ["shared.js", "contentScript.js"]
+    }).catch(() => { /* page does not allow injection */ });
+  }));
+};
+
+// =========================
 // Lifecycle
 // =========================
 
@@ -96,6 +117,7 @@ const resetTransient = async () => {
 
 chrome.runtime.onInstalled.addListener((details) => {
   resetTransient();
+  injectIntoOpenTabs();
   // First install only: open the options page once so setup is obvious.
   if (details && details.reason === "install") {
     try { chrome.runtime.openOptionsPage(); } catch { /* no UI available */ }
