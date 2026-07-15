@@ -1,5 +1,43 @@
 # Changelog
 
+## 2.0.0
+
+The "one click before you share" release.
+
+- 7-day Pro trial for every install. Everything unlocks locally on
+  install day; no account, no card, no server. When it ends the free
+  features stay and saved rosters are kept.
+- Presentation shield (Alt+Shift+S, or the big popup button): masks
+  tab titles and favicons in every tab and, with Pro, forces roster
+  blur on everywhere. Toolbar badge shows ON while armed; the shield
+  always starts a browser session disarmed.
+- Capture roster from the page (Pro): click your gradebook or class
+  list and the student names are extracted and saved as a roster,
+  with a preview before anything is stored.
+- One-click activation: the purchase confirmation page now shows an
+  "Activate in RosterBlur" button when the extension is installed;
+  no more copy-and-paste (which still works).
+- Pseudonym styles: keep "Student 1" labels or switch to stable
+  fictional names (Avery M., Riley P., ...).
+- Blur student photos and avatars whose alt text matches a roster
+  name (Pro, opt-in).
+- Blur grade cells: table cells that contain only a grade-shaped
+  token (A-, 95%, 18/20) can blur too (Pro, opt-in).
+- Never-blur list: names that should stay visible (yours,
+  co-teachers) are excluded from matching.
+- Quick roster switching and a hidden-names counter in the popup.
+  Counters are local, like everything else.
+- Site licenses: Department (5 teachers) and School (30 teachers)
+  keys carry their tier; the activation service mints them from
+  their own payment links. Individual keys are unchanged and all
+  existing keys keep working.
+- Firefox support. `node build.js --firefox` builds the same extension
+  with a Firefox manifest (event-page background scripts instead of a
+  service worker, `options_ui`, gecko id and data-collection
+  declaration for AMO, minimum Firefox 140).
+- New "alarms" permission (fires once when the trial ends). Still
+  zero network requests from the extension.
+
 ## 1.1.1
 
 - The popup tools no longer sit disabled on tabs that were already open

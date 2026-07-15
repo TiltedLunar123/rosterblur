@@ -22,6 +22,10 @@ const RB = (() => {
     LICENSE: "rb_license",
     PRO_FLAG: "rb_pro",
     MEETING: "rb_meeting",
+    INSTALL: "rb_install",
+    SHIELD: "rb_shield",
+    STATS: "rb_stats",
+    REVIEW: "rb_review",
     SITE_PREFIX: "rb_site_"
   });
 
@@ -29,7 +33,11 @@ const RB = (() => {
     blurPx: 8,
     rosterEnabled: true,
     pseudonymize: false,
+    pseudonymStyle: "student", // "student" -> Student 1; "names" -> fictional names
     standaloneNames: false,
+    blurAvatars: false,
+    blurGrades: false,
+    excludeNames: Object.freeze([]),
     patterns: Object.freeze({ email: true, phone: false, studentId: false })
   });
 
@@ -37,6 +45,7 @@ const RB = (() => {
     PRICE_LABEL: "$15 lifetime",
     BUY_URL: "https://buy.stripe.com/6oU9AUg6Ld3Q4YU9VNdUY01",
     ACTIVATE_URL: "https://rosterblur-pro.netlify.app/activate",
+    SUPPORT_EMAIL: "support@secplusmastery.com",
     STORAGE_KEY: STORAGE.LICENSE
   });
 
@@ -190,6 +199,65 @@ const RB = (() => {
   };
 
   // =========================
+  // Roster capture
+  // =========================
+  // Turns the text lines under a clicked page element into a roster.
+  // Deliberately strict: it is easier for a teacher to add a missed
+  // name than to prune UI junk out of a sloppy capture.
+
+  const CAPTURE_STOPWORDS = new Set([
+    "student", "students", "name", "names", "first", "last", "grade", "grades",
+    "email", "score", "scores", "average", "total", "period", "class", "classes",
+    "teacher", "teachers", "room", "date", "assignment", "assignments", "due",
+    "missing", "late", "absent", "present", "tardy", "days", "view", "edit",
+    "add", "remove", "all", "search", "sort", "filter", "actions", "status",
+    "points", "percent", "letter", "overall", "section", "group", "roster",
+    "invite", "settings", "more", "menu", "select", "export", "import", "none",
+    "google", "classroom", "canvas", "powerschool", "schoology", "synergy"
+  ]);
+
+  const NAME_WORD_RE = /^\p{Lu}[\p{L}'’.-]*$/u;
+
+  const looksLikeName = (line) => {
+    let s = collapseSpaces(line);
+    if (s.length < 4 || s.length > 40) return false;
+    if (/[\d@]/.test(s)) return false;
+    const comma = s.match(/^([^,]+),\s*(.+)$/);
+    if (comma) s = collapseSpaces(comma[2] + " " + comma[1]);
+    if (/[,;:!?()[\]{}"]/.test(s)) return false;
+    const words = s.split(" ");
+    if (words.length < 2 || words.length > 4) return false;
+    for (const word of words) {
+      if (!NAME_WORD_RE.test(word)) return false;
+      if (CAPTURE_STOPWORDS.has(word.toLowerCase().replace(/[.'’-]/g, ""))) return false;
+    }
+    return true;
+  };
+
+  const extractNames = (lines) => {
+    const seen = new Set();
+    const names = [];
+    for (const raw of lines || []) {
+      const line = String(raw || "").trim();
+      if (!line || !looksLikeName(line)) continue;
+      const name = normalizeRosterName(line);
+      const key = canonicalName(name);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      names.push(name);
+      if (names.length >= MAX_ROSTER_NAMES) break;
+    }
+    return names;
+  };
+
+  // Names a teacher never wants blurred (their own, co-teachers).
+  const applyExclusions = (names, excludeList) => {
+    const excluded = new Set((excludeList || []).map(canonicalName).filter(Boolean));
+    if (!excluded.size) return names || [];
+    return (names || []).filter((n) => !excluded.has(canonicalName(n)));
+  };
+
+  // =========================
   // Name matcher
   // =========================
   // One compiled regex over folded lowercase alternatives, anchored on
@@ -308,24 +376,54 @@ const RB = (() => {
   // =========================
   // Labels are keyed to the student's position across the enabled
   // rosters, so "Student 3" stays "Student 3" on every page and in
-  // every tab for as long as the roster order holds.
+  // every tab for as long as the roster order holds. The "names" style
+  // swaps in fictional names so recordings look natural; the list is
+  // fixed, so the same student keeps the same fictional name too.
 
-  const buildPseudonyms = (students) => {
+  const FAKE_NAMES = Object.freeze([
+    "Avery M.", "Riley P.", "Jordan T.", "Casey L.", "Quinn R.", "Rowan S.",
+    "Skyler D.", "Emerson K.", "Finley H.", "Harper W.", "Sage B.", "Reese C.",
+    "Dakota J.", "Ellis F.", "Marlowe G.", "Nico V.", "Oakley N.", "Peyton A.",
+    "Remy E.", "Shiloh O.", "Tatum I.", "Wren U.", "Blair Y.", "Cameron Z.",
+    "Devon Q.", "Hollis X.", "Jules M.", "Kai P.", "Lennon T.", "Micah L."
+  ]);
+
+  const pseudoLabel = (index, style) => {
+    if (style === "names") {
+      const base = FAKE_NAMES[index % FAKE_NAMES.length];
+      const round = Math.floor(index / FAKE_NAMES.length);
+      return round ? base + " " + (round + 1) : base;
+    }
+    return "Student " + (index + 1);
+  };
+
+  const buildPseudonyms = (students, style = "student") => {
     const labels = new Map();
     (students || []).forEach((name, i) => {
-      labels.set(canonicalName(name), "Student " + (i + 1));
+      labels.set(canonicalName(name), pseudoLabel(i, style));
     });
     return {
       labelFor: (nameOrIndex) => {
         if (typeof nameOrIndex === "number") {
           return nameOrIndex >= 0 && nameOrIndex < (students || []).length
-            ? "Student " + (nameOrIndex + 1)
+            ? pseudoLabel(nameOrIndex, style)
             : "Student";
         }
         return labels.get(canonicalName(nameOrIndex)) || "Student";
       }
     };
   };
+
+  // =========================
+  // Grade tokens (Pro)
+  // =========================
+  // Cell-scoped on purpose: only a table cell whose ENTIRE text is a
+  // grade-shaped token ("A-", "95%", "18/20") ever blurs, so ordinary
+  // prose with percentages in it stays readable.
+
+  const GRADE_TOKEN_RE = /^(?:[A-F][+-]?|\d{1,3}(?:\.\d+)?\s*%|\d{1,3}(?:\.\d+)?\s*\/\s*\d{1,3}(?:\.\d+)?)$/;
+
+  const isGradeToken = (text) => GRADE_TOKEN_RE.test(collapseSpaces(String(text || "")));
 
   // =========================
   // Auto-detect patterns (Pro)
@@ -540,6 +638,45 @@ const RB = (() => {
     getState: getLicenseState
   });
 
+  // =========================
+  // Trial and access
+  // =========================
+  // Every install gets the full Pro feature set for 7 days, enforced
+  // locally with the install timestamp. Same trust model as the rest
+  // of the extension (honest-teacher grade, not DRM): a determined
+  // user can reset it, a paying school cannot be locked out by it.
+  // A valid license always wins over the trial clock.
+
+  const TRIAL_DAYS = 7;
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  const trialInfo = (installedAt, now = Date.now()) => {
+    const at = Number(installedAt) || 0;
+    if (!at) return { active: false, endsAt: 0, daysLeft: 0 };
+    const endsAt = at + TRIAL_DAYS * DAY_MS;
+    const msLeft = endsAt - now;
+    return {
+      active: msLeft > 0,
+      endsAt,
+      daysLeft: Math.max(0, Math.ceil(msLeft / DAY_MS))
+    };
+  };
+
+  // The one question the UI and the service worker ask: does this
+  // browser have Pro right now, and why?
+  const getAccess = async () => {
+    const [licenseState, data] = await Promise.all([
+      getLicenseState(),
+      storageGet([STORAGE.INSTALL])
+    ]);
+    if (licenseState.active) {
+      return { pro: true, source: "license", payload: licenseState.payload, trial: trialInfo(0) };
+    }
+    const install = data[STORAGE.INSTALL] || {};
+    const trial = trialInfo(install.at);
+    return { pro: trial.active, source: trial.active ? "trial" : null, payload: null, trial };
+  };
+
   return Object.freeze({
     STORAGE,
     DEFAULT_SETTINGS,
@@ -551,9 +688,13 @@ const RB = (() => {
     canonicalName,
     parseRoster,
     parseCsv,
+    extractNames,
+    applyExclusions,
     buildMatcher,
     findMatches,
     buildPseudonyms,
+    FAKE_NAMES,
+    isGradeToken,
     PATTERNS,
     findPatternMatches,
     storageGet,
@@ -564,7 +705,10 @@ const RB = (() => {
     siteKey,
     getSiteState,
     setSiteState,
-    license
+    license,
+    TRIAL_DAYS,
+    trialInfo,
+    getAccess
   });
 })();
 

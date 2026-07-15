@@ -33,22 +33,41 @@ function b64url(input) {
 
 // Payload deliberately tiny: version, plan, a session-id tail (enough
 // to correlate with Stripe without embedding the full unguessable id),
-// and the purchase timestamp. Signature is raw r||s (ieee-p1363) over
-// the base64url payload STRING, matching WebCrypto's verify input in
-// the extension.
-function mintKey(privateKeyPem, sessionId, purchasedAt) {
-  const payload = JSON.stringify({
+// and the purchase timestamp. Site licenses add tier and seats; the
+// extension ignores fields it does not know, so old and new keys both
+// verify everywhere. Signature is raw r||s (ieee-p1363) over the
+// base64url payload STRING, matching WebCrypto's verify input in the
+// extension.
+function mintKey(privateKeyPem, sessionId, purchasedAt, tier = null) {
+  const payload = {
     v: 1,
     plan: "pro",
     sid: String(sessionId).slice(-10),
     iat: Number(purchasedAt) || 0
-  });
-  const payloadPart = b64url(payload);
+  };
+  if (tier && tier.name) {
+    payload.tier = tier.name;
+    payload.seats = tier.seats;
+  }
+  const payloadPart = b64url(JSON.stringify(payload));
   const signature = crypto.sign("sha256", Buffer.from(payloadPart, "utf8"), {
     key: privateKeyPem,
     dsaEncoding: "ieee-p1363"
   });
   return `RB1.${payloadPart}.${b64url(signature)}`;
+}
+
+// Which payment link produced this session decides the license tier.
+// Individual keys keep the exact 1.x payload shape.
+function resolveTier(paymentLink, env) {
+  if (paymentLink && paymentLink === env.STRIPE_PAYMENT_LINK_ID) return { match: true, tier: null };
+  if (paymentLink && paymentLink === env.STRIPE_PAYMENT_LINK_ID_DEPT) {
+    return { match: true, tier: { name: "dept", seats: 5 } };
+  }
+  if (paymentLink && paymentLink === env.STRIPE_PAYMENT_LINK_ID_SCHOOL) {
+    return { match: true, tier: { name: "school", seats: 30 } };
+  }
+  return { match: false, tier: null };
 }
 
 async function fetchCheckoutSession(sessionId, apiKey, fetchImpl) {
@@ -93,13 +112,13 @@ async function handler(event) {
   }
 
   const paid = session.data.payment_status === "paid";
-  const rightProduct = session.data.payment_link === paymentLinkId;
-  if (!paid || !rightProduct) {
+  const resolved = resolveTier(session.data.payment_link, process.env);
+  if (!paid || !resolved.match) {
     return respond(402, { error: "this session is not a completed Pro purchase" });
   }
 
   try {
-    const key = mintKey(privateKeyPem, sessionId, session.data.created);
+    const key = mintKey(privateKeyPem, sessionId, session.data.created, resolved.tier);
     return respond(200, { key });
   } catch {
     return respond(500, { error: "key minting failed, contact support with your receipt" });
@@ -108,4 +127,4 @@ async function handler(event) {
 
 exports.handler = handler;
 // Exposed for unit tests only.
-exports._internal = { mintKey, SESSION_ID_PATTERN };
+exports._internal = { mintKey, resolveTier, SESSION_ID_PATTERN };

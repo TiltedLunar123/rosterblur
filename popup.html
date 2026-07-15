@@ -8,6 +8,22 @@
     header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
     header img { width: 22px; height: 22px; }
     .badges { margin-left: auto; display: flex; gap: 6px; }
+    .pill.trial { background: rgba(252, 211, 77, 0.15); color: var(--warn); border: 1px solid rgba(252, 211, 77, 0.4); }
+    .shield {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 11px 12px;
+      text-align: left;
+      margin-bottom: 10px;
+    }
+    .shield svg { flex: none; width: 20px; height: 20px; color: var(--accent); }
+    .shield.active svg { color: var(--mint); }
+    .shield .shield-text { flex: 1; }
+    .shield .shield-title { font-weight: 600; font-size: 13px; }
+    .shield .shield-sub { font-size: 11.5px; color: var(--muted); }
+    .shield.active .shield-sub { color: var(--mint); }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .tool {
       display: flex;
@@ -20,6 +36,7 @@
     }
     .tool svg { flex: none; width: 15px; height: 15px; color: var(--accent); }
     .tool.active svg { color: var(--mint); }
+    .tool.wide { margin-top: 8px; }
     .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
     .slider-row > span { font-size: 12.5px; color: var(--muted); }
     .slider-row output { min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; font-size: 12.5px; }
@@ -28,10 +45,16 @@
     .site-row { display: flex; align-items: center; gap: 10px; }
     .site-row span { flex: 1; }
     #rosterCard a { display: inline-block; margin-top: 4px; font-size: 12px; }
+    #rosterQuick { margin: 4px 0 0; display: grid; gap: 2px; }
+    #rosterQuick label { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+    #trialHint { margin-top: 6px; font-size: 11.5px; }
     .upsell-title { font-weight: 600; font-size: 13px; }
     .upsell p { margin: 6px 0 10px; }
     .upsell-actions { display: flex; align-items: center; gap: 10px; }
     .upsell-actions a { font-size: 12px; }
+    #statsRow { margin-top: 10px; font-size: 11.5px; color: var(--muted); text-align: center; }
+    #reviewRow { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; }
+    #reviewRow span { flex: 1; color: var(--muted); }
     footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
     .keys { font-size: 11px; color: var(--muted); }
     #siteNote { margin-top: 10px; }
@@ -42,10 +65,19 @@
     <img src="icons/icon32.png" alt="" />
     <h1>RosterBlur</h1>
     <span class="badges">
+      <span id="trialBadge" class="pill trial hidden"></span>
       <span id="proBadge" class="pill pro hidden">PRO</span>
       <span id="meetingBadge" class="pill pro hidden">MEETING</span>
     </span>
   </header>
+
+  <button id="shieldBtn" class="shield" aria-pressed="false" title="Arm everything before you share your screen (Alt+Shift+S)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    <span class="shield-text">
+      <span class="shield-title">Presentation shield</span><br />
+      <span class="shield-sub" id="shieldSub">Off. One click before you share.</span>
+    </span>
+  </button>
 
   <div class="grid">
     <button id="pickerBtn" class="tool" aria-pressed="false" title="Hover and click any element to blur it (Alt+Shift+B)">
@@ -66,6 +98,11 @@
     </button>
   </div>
 
+  <button id="captureBtn" class="tool wide hidden" title="Click your roster on the page and save every student name at once">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>Capture roster from this page</span>
+  </button>
+
   <div class="slider-row">
     <span>Strength</span>
     <input type="range" id="blurRange" min="4" max="16" step="1" aria-label="Blur strength" />
@@ -80,14 +117,19 @@
     </label>
     <label class="row">
       <input type="checkbox" id="pseudoToggle" />
-      <span>Pseudonymize (Student 1, 2, ...)</span>
+      <span>Pseudonymize names</span>
     </label>
+    <div id="rosterQuick" class="hidden"></div>
     <a href="#" id="editRostersLink">Edit rosters</a>
+    <div id="trialHint" class="hidden">
+      <span class="muted" id="trialHintText"></span>
+      <a href="#" id="trialBuyLink">Keep it: $15 once</a>
+    </div>
   </div>
 
   <div class="section card upsell hidden" id="proCard">
-    <div class="upsell-title">Auto-blur every student name</div>
-    <p class="muted">Paste your class roster once. Pro hides every name on every page, even ones that load late.</p>
+    <div class="upsell-title" id="upsellTitle">Auto-blur every student name</div>
+    <p class="muted" id="upsellText">Paste your class roster once. Pro hides every name on every page, even ones that load late.</p>
     <div class="upsell-actions">
       <button id="buyBtn" class="primary">Get Pro - $15 once</button>
       <a href="#" id="haveKeyLink">Have a key?</a>
@@ -102,12 +144,20 @@
   </div>
 
   <p id="siteNote" class="muted hidden">
-    This page does not allow extensions, so the tools above are off here.
+    This page does not allow extensions, so the site tools above are off here.
   </p>
+
+  <div id="statsRow" class="hidden"></div>
+
+  <div id="reviewRow" class="hidden">
+    <span>Is RosterBlur earning its keep?</span>
+    <a href="#" id="reviewLink">Rate it</a>
+    <button id="reviewDismiss" class="small" title="Don't ask again">&times;</button>
+  </div>
 
   <footer>
     <a href="#" id="optionsLink">Options</a>
-    <span class="keys">Picker <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> &middot; Panic <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd></span>
+    <span class="keys">Shield <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> &middot; Panic <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd></span>
   </footer>
 
   <script src="shared.js"></script>

@@ -8,8 +8,15 @@ Built for teachers who present gradebooks, seating charts, LMS pages,
 and email in front of a class, on a projector, or in a recorded
 meeting.
 
+Every install starts with a 7-day Pro trial (local, no card, no
+account); after that the free features stay and Pro is $15 once.
+
 ## Free features
 
+- **Presentation shield.** Alt+Shift+S (or the big button in the
+  popup) arms everything before you share: tab titles and favicons go
+  neutral in every tab, roster blur switches on everywhere (Pro), and
+  the toolbar badge shows ON until you disarm it.
 - **Click-to-blur.** Toggle the picker (toolbar button or
   Alt+Shift+B), hover to highlight, click any element to blur it.
   Click again to unblur.
@@ -24,21 +31,31 @@ meeting.
 
 ## Pro features ($15 once, lifetime)
 
-- **Roster auto-blur.** Paste class rosters (one name per line) into
-  the options page. Every visible occurrence of a roster name is
-  blurred automatically on every page, including content that renders
-  late or re-renders (Google Classroom, PowerSchool, and other
-  single-page apps).
-- **Pseudonymize mode.** Show "Student 1", "Student 2", ... instead of
-  a blur so recordings and live demos look natural. Labels are stable:
-  the same student gets the same number everywhere.
+- **Roster auto-blur.** Add class rosters and every visible occurrence
+  of a roster name is blurred automatically on every page, including
+  content that renders late or re-renders (Google Classroom,
+  PowerSchool, and other single-page apps).
+- **Capture roster from the page.** Open your gradebook or class list,
+  click "Capture roster from this page" in the popup, click the list,
+  and the names save as a roster. No typing.
+- **Pseudonymize mode.** Replace names instead of blurring: stable
+  "Student 1" labels or natural-looking fictional names, so recordings
+  and live demos look normal. The same student keeps the same stand-in
+  everywhere.
+- **Photo and grade blur.** Blur student avatars whose alt text
+  matches a roster name, and table cells that contain only a grade
+  (A-, 95%, 18/20).
 - **Pattern detection.** Optionally auto-blur email addresses, phone
   numbers, and long ID numbers.
+- **Never-blur list.** Your own name and co-teachers stay visible.
 - **CSV import.** Load rosters from simple exports (first,last columns
   or a single name column).
 - **Meeting mode.** When a Google Meet, Zoom, or Teams tab is open,
   roster blur turns on across all tabs automatically and a small
   indicator appears.
+
+Site licenses for teams: Department (5 teachers, $49) and School
+building (30 teachers, $129); email support@secplusmastery.com.
 
 Name matching is case-insensitive, accent-insensitive (Jose finds
 Jose and José), anchored to word boundaries ("May Chen" never fires
@@ -75,13 +92,19 @@ contacts a license server.
 3. Load unpacked, select the repo folder (or run `node build.js` and
    select `dist/`).
 
+Firefox: run `node build.js --firefox`, open `about:debugging`, and
+load `dist-firefox/manifest.json` as a temporary add-on. Same code;
+the Firefox manifest swaps the service worker for event-page scripts
+and adds the gecko settings AMO requires.
+
 ## Development
 
 ```bash
 npm install
 npm test          # unit tests (matcher, parsers, license, key service)
 npm run e2e       # live browser checks with the extension loaded
-npm run zip       # build dist/ and the store zip
+npm run zip       # build dist/ and the Chrome store zip
+npm run zip:firefox  # build dist-firefox/ and the Firefox (AMO) zip
 ```
 
 The `netlify/` folder contains the one-function license service; see

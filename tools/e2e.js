@@ -254,6 +254,86 @@ async function main() {
     check(spaAlive, "SPA keeps re-rendering (page not crashed)");
     await spa.screenshot({ path: path.join(DOCS, "e2e-spa-dynamic-blur.png") });
 
+    // ================= v2: trial access =================
+    // A fresh profile gets an install stamp on onInstalled; with no
+    // license stored, access resolves to the 7-day trial.
+    const trial = await sw.evaluate(async () => {
+      const data = await chrome.storage.local.get(["rb_install"]);
+      const access = await RB.getAccess();
+      return {
+        stamped: !!(data.rb_install && data.rb_install.at),
+        source: access.source,
+        daysLeft: access.trial.daysLeft
+      };
+    });
+    check(trial.stamped, "install record stamped for the trial clock");
+    if (process.env.RB_E2E_LICENSE) {
+      check(trial.source === "license", "getAccess resolves license access");
+    } else {
+      check(trial.source === "trial" && trial.daysLeft === 7,
+        "getAccess resolves a fresh 7-day trial (" + trial.daysLeft + " days left)");
+    }
+
+    // ================= v2: presentation shield =================
+    await page.bringToFront();
+    await sw.evaluate(async () => {
+      await chrome.storage.local.set({ rb_shield: { active: true } });
+    });
+    await sleep(900);
+    const shieldMasked = await page.evaluate(() => document.title === "Untitled");
+    check(shieldMasked, "shield masks the tab title without a per-site mask");
+
+    // Roster blur must stay on under the shield even with the setting off.
+    await sw.evaluate(async () => {
+      const data = await chrome.storage.local.get(["rb_settings"]);
+      await chrome.storage.local.set({ rb_settings: { ...data.rb_settings, rosterEnabled: false } });
+    });
+    await sleep(1200);
+    const shieldRoster = await page.evaluate(() => {
+      const td = [...document.querySelectorAll("td")].find((el) => el.textContent.trim() === "Jordan Smith");
+      return !!td && getComputedStyle(td).filter.includes("blur");
+    });
+    check(shieldRoster, "shield keeps roster blur on with the setting off");
+
+    await sw.evaluate(async () => {
+      const data = await chrome.storage.local.get(["rb_settings"]);
+      await chrome.storage.local.set({
+        rb_shield: { active: false },
+        rb_settings: { ...data.rb_settings, rosterEnabled: true }
+      });
+    });
+    await sleep(900);
+    const titleRestored = await page.evaluate(() => document.title !== "Untitled");
+    check(titleRestored, "disarming the shield restores the tab title");
+
+    // ================= v2: capture roster from page =================
+    await sw.evaluate(async (id) => {
+      await chrome.tabs.sendMessage(id, { type: "rb-command", command: "capture-names" });
+    }, tabId);
+    await sleep(400);
+    await page.click("table tbody tr td");
+    await sleep(600);
+    const panelText = await page.evaluate(() => {
+      const el = document.querySelector('[data-rb="capture"]');
+      return el ? el.textContent : "";
+    });
+    check(/Found \d+ student names/.test(panelText),
+      "capture preview panel found names");
+    await page.evaluate(() => {
+      const el = document.querySelector('[data-rb="capture"]');
+      const btn = [...el.querySelectorAll("button")].find((b) => b.textContent === "Save roster");
+      btn.click();
+    });
+    await sleep(700);
+    const rosterCount = await sw.evaluate(async () =>
+      (await chrome.storage.local.get(["rb_rosters"])).rb_rosters.length);
+    check(rosterCount === 2, "captured roster saved as a second roster");
+
+    // ================= v2: hidden-name stats =================
+    const stats = await sw.evaluate(async () =>
+      (await chrome.storage.local.get(["rb_stats"])).rb_stats || {});
+    check((stats.total || 0) > 0, "hidden-name counters accumulated (" + (stats.total || 0) + " total)");
+
     // ================= Popup + options for the record =================
     const popup = await context.newPage();
     await popup.goto("chrome-extension://" + extensionId + "/popup.html");

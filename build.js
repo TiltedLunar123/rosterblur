@@ -2,6 +2,10 @@
 // build.js: copies the extension files into dist/ and, with --zip,
 // produces the store-ready rosterblur.zip. Copy and zip only; nothing
 // gets bundled, minified, or rewritten.
+//
+// --firefox builds the Firefox variant instead: same files, but
+// manifest.firefox.json ships as the manifest (event-page background,
+// gecko id, options_ui), into dist-firefox/ and rosterblur-firefox.zip.
 
 "use strict";
 
@@ -9,16 +13,18 @@ const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
 
+const FIREFOX = process.argv.includes("--firefox");
+
 const SRC = __dirname;
-const DIST = path.join(SRC, "dist");
-const ZIP_PATH = path.join(SRC, "rosterblur.zip");
+const DIST = path.join(SRC, FIREFOX ? "dist-firefox" : "dist");
+const ZIP_PATH = path.join(SRC, FIREFOX ? "rosterblur-firefox.zip" : "rosterblur.zip");
 
 const FILES = [
-  "manifest.json",
   "shared.js",
   "shared.css",
   "background.js",
   "contentScript.js",
+  "activate.js",
   "popup.html",
   "popup.js",
   "options.html",
@@ -30,6 +36,11 @@ const DIRS = ["icons"];
 function build() {
   if (fs.existsSync(DIST)) fs.rmSync(DIST, { recursive: true });
   fs.mkdirSync(DIST, { recursive: true });
+
+  const manifestSrc = path.join(SRC, FIREFOX ? "manifest.firefox.json" : "manifest.json");
+  if (!fs.existsSync(manifestSrc)) throw new Error("Missing file: " + path.basename(manifestSrc));
+  fs.copyFileSync(manifestSrc, path.join(DIST, "manifest.json"));
+  console.log("Copied: " + path.basename(manifestSrc) + " -> manifest.json");
 
   for (const file of FILES) {
     const src = path.join(SRC, file);
