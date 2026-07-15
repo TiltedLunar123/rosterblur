@@ -25,10 +25,12 @@
     settings: { ...RB.DEFAULT_SETTINGS },
     pro: false,
     meetingActive: false,
+    shieldActive: false,
     matcher: null,
     pseudo: null,
     site: { selectors: [], areas: [], mask: false },
     picking: false,
+    capturing: false,
     drawingArea: false,
     panic: false,
     maskSaved: null // { title, icons: [{el, href}] }
@@ -210,10 +212,52 @@
 
   const rosterOn = () =>
     state.pro && state.matcher && !state.matcher.isEmpty &&
-    (state.settings.rosterEnabled || state.meetingActive);
+    (state.settings.rosterEnabled || state.meetingActive || state.shieldActive);
 
   const patternsOn = () =>
     state.pro && Object.values(state.settings.patterns || {}).some(Boolean);
+
+  const gradesOn = () => state.pro && state.settings.blurGrades;
+
+  // =========================
+  // Hidden-name stats
+  // =========================
+  // Each NEW thing hidden on this page load counts once (rescans
+  // re-create the same artifacts and must not double-count). Deltas
+  // batch to the background, which owns the rolling counters.
+
+  const countedEls = new WeakSet();
+  const countedRanges = new WeakMap(); // text node -> Set("start:end")
+  let statsPending = 0;
+  let statsTimer = null;
+
+  const flushStats = () => {
+    statsTimer = null;
+    if (!statsPending) return;
+    const n = statsPending;
+    statsPending = 0;
+    try { chrome.runtime.sendMessage({ type: "rb-stats-delta", names: n }); } catch { /* context gone */ }
+  };
+
+  const bumpStat = () => {
+    statsPending++;
+    if (!statsTimer) statsTimer = setTimeout(flushStats, 4000);
+  };
+
+  const noteElHidden = (el) => {
+    if (countedEls.has(el)) return;
+    countedEls.add(el);
+    bumpStat();
+  };
+
+  const noteRangeHidden = (node, start, end) => {
+    let set = countedRanges.get(node);
+    if (!set) { set = new Set(); countedRanges.set(node, set); }
+    const key = start + ":" + end;
+    if (set.has(key)) return;
+    set.add(key);
+    bumpStat();
+  };
 
   const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "CODE", "PRE", "KBD", "SAMP", "TEXTAREA", "TITLE"]);
 
@@ -239,6 +283,7 @@
     if (!useLabel && parentTextLen <= Math.max(matchLen + 12, MAX_CLASS_BLUR_TEXT) && parentTextLen > 0) {
       parent.classList.add("rb-name-blur");
       classMarked.add(parent);
+      noteElHidden(parent);
       return;
     }
     if (alreadyCovered(node, m.start, m.end)) return;
@@ -250,7 +295,10 @@
       label: useLabel ? state.pseudo.labelFor(m.student) : "",
       chips: []
     };
-    if (buildChips(entry)) overlays.push(entry);
+    if (buildChips(entry)) {
+      overlays.push(entry);
+      noteRangeHidden(node, m.start, m.end);
+    }
   };
 
   const scanTextNode = (node) => {
@@ -266,6 +314,15 @@
         treatMatch(node, m, false);
       }
     }
+    if (gradesOn()) {
+      const parent = node.parentElement;
+      if (parent && (parent.tagName === "TD" || parent.tagName === "TH") &&
+          !classMarked.has(parent) && RB.isGradeToken(parent.textContent)) {
+        parent.classList.add("rb-name-blur");
+        classMarked.add(parent);
+        noteElHidden(parent);
+      }
+    }
   };
 
   const checkInput = (el) => {
@@ -279,14 +336,38 @@
     if (hit) {
       el.classList.add("rb-name-blur");
       inputMarked.add(el);
+      noteElHidden(el);
     } else if (inputMarked.has(el)) {
       el.classList.remove("rb-name-blur");
       inputMarked.delete(el);
     }
   };
 
+  // Avatar photos next to roster names (Google Classroom, LMS people
+  // pages) carry the student's name in alt/aria text; match on that.
+  const AVATAR_SELECTOR = 'img[alt], img[title], [role="img"][aria-label]';
+
+  const checkAvatar = (el) => {
+    const text = el.getAttribute("alt") || el.getAttribute("aria-label") || el.getAttribute("title") || "";
+    if (text.length < 3 || classMarked.has(el)) return;
+    if (RB.findMatches(state.matcher, text).length) {
+      el.classList.add("rb-name-blur");
+      classMarked.add(el);
+      noteElHidden(el);
+    }
+  };
+
+  const scanAvatars = (root) => {
+    if (!rosterOn() || !state.settings.blurAvatars) return;
+    if (!root || root.nodeType === 3) return;
+    if (root.querySelectorAll) {
+      for (const el of root.querySelectorAll(AVATAR_SELECTOR)) checkAvatar(el);
+    }
+    if (root.matches && root.matches(AVATAR_SELECTOR)) checkAvatar(root);
+  };
+
   const scanRoot = (root) => {
-    if (!rosterOn() && !patternsOn()) return;
+    if (!rosterOn() && !patternsOn() && !gradesOn()) return;
     if (!root || insideOurUi(root)) return;
 
     if (root.nodeType === 3) { // bare text node from characterData
@@ -310,6 +391,7 @@
       for (const el of root.querySelectorAll("input, textarea")) checkInput(el);
       if (root.matches && root.matches("input, textarea")) checkInput(root);
     }
+    scanAvatars(root);
   };
 
   const clearNameArtifacts = () => {
@@ -371,7 +453,7 @@
           }
         }
       }
-      if (any && state.site.mask) enforceTitleMask();
+      if (any && maskApplied) enforceTitleMask();
     });
     observer.observe(document.documentElement, {
       childList: true,
@@ -504,6 +586,7 @@
     const doc = document.documentElement;
     if (on) {
       setDrawingArea(false);
+      setCapturing(false);
       doc.classList.add("rb-picking");
       document.addEventListener("mousemove", onPickerMove, true);
       document.addEventListener("click", onPickerClick, true);
@@ -517,6 +600,164 @@
       if (hoverEl) { hoverEl.classList.remove("rb-hover-target"); hoverEl = null; }
       hideToast();
     }
+  };
+
+  // =========================
+  // Capture roster from page (Pro)
+  // =========================
+  // Teacher clicks the list or table that shows their students; the
+  // text under it runs through RB.extractNames and a small preview
+  // panel offers to save the result as a new roster. Names never
+  // leave chrome.storage.local, same as hand-typed rosters.
+
+  let capturePanel = null;
+
+  const captureLines = (el) => String(el.innerText || "").split(/[\n\t]+/);
+
+  const onCaptureKey = (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setCapturing(false);
+    }
+  };
+
+  const onCaptureClick = (e) => {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const target = e.target;
+    if (!target || target.nodeType !== 1 || insideOurUi(target)) return;
+    // Climb a few levels: the click usually lands on one row of the
+    // roster, but the names live in the surrounding list or table.
+    let names = [];
+    let el = target;
+    for (let hop = 0; el && el !== document.body && hop < 5; hop++) {
+      names = RB.extractNames(captureLines(el));
+      if (names.length >= 2) break;
+      el = el.parentElement;
+    }
+    if (names.length < 2) {
+      showToast("No student names found there. Click the roster list or table itself. Esc exits.");
+      return;
+    }
+    setCapturing(false);
+    openCapturePanel(names);
+  };
+
+  const setCapturing = (on) => {
+    if (state.capturing === on) return;
+    if (on && !state.pro) return;
+    state.capturing = on;
+    const doc = document.documentElement;
+    if (on) {
+      setPicking(false);
+      setDrawingArea(false);
+      closeCapturePanel();
+      doc.classList.add("rb-picking");
+      document.addEventListener("mousemove", onPickerMove, true);
+      document.addEventListener("click", onCaptureClick, true);
+      document.addEventListener("keydown", onCaptureKey, true);
+      showToast("Click the list or table that shows your students. Esc exits.");
+    } else {
+      doc.classList.remove("rb-picking");
+      document.removeEventListener("mousemove", onPickerMove, true);
+      document.removeEventListener("click", onCaptureClick, true);
+      document.removeEventListener("keydown", onCaptureKey, true);
+      if (hoverEl) { hoverEl.classList.remove("rb-hover-target"); hoverEl = null; }
+      hideToast();
+    }
+  };
+
+  const closeCapturePanel = () => {
+    if (capturePanel) { capturePanel.remove(); capturePanel = null; }
+  };
+
+  const openCapturePanel = (names) => {
+    closeCapturePanel();
+    capturePanel = document.createElement("div");
+    capturePanel.setAttribute("data-rb", "capture");
+    const s = capturePanel.style;
+    s.position = "fixed";
+    s.top = "16px";
+    s.right = "16px";
+    s.zIndex = "2147483646";
+    s.width = "300px";
+    s.maxHeight = "70vh";
+    s.overflow = "auto";
+    s.background = "rgba(23, 18, 56, 0.97)";
+    s.color = "#e0e7ff";
+    s.font = "13px/1.5 system-ui, sans-serif";
+    s.padding = "14px";
+    s.borderRadius = "12px";
+    s.boxShadow = "0 8px 30px rgba(0, 0, 0, 0.45)";
+
+    const title = document.createElement("div");
+    title.style.fontWeight = "600";
+    title.style.marginBottom = "6px";
+    title.textContent = "Found " + names.length + " student name" + (names.length === 1 ? "" : "s");
+
+    const preview = document.createElement("div");
+    preview.style.color = "#a5b4fc";
+    preview.style.fontSize = "12px";
+    preview.style.marginBottom = "10px";
+    const shown = names.slice(0, 8);
+    preview.textContent =
+      shown.join(", ") + (names.length > shown.length ? " and " + (names.length - shown.length) + " more" : "");
+
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.value = "Captured from " + (HOST || "this page");
+    const ni = nameInput.style;
+    ni.width = "100%";
+    ni.boxSizing = "border-box";
+    ni.marginBottom = "10px";
+    ni.padding = "7px 9px";
+    ni.borderRadius = "8px";
+    ni.border = "1px solid rgba(165, 180, 252, 0.4)";
+    ni.background = "rgba(13, 11, 30, 0.85)";
+    ni.color = "#e0e7ff";
+    ni.font = "12.5px system-ui, sans-serif";
+
+    const styleBtn = (btn, primary) => {
+      const b = btn.style;
+      b.font = "600 12.5px system-ui, sans-serif";
+      b.padding = "7px 12px";
+      b.borderRadius = "8px";
+      b.cursor = "pointer";
+      b.border = "1px solid rgba(165, 180, 252, 0.45)";
+      b.background = primary ? "#818cf8" : "rgba(129, 140, 248, 0.15)";
+      b.color = primary ? "#0e0c22" : "#e0e7ff";
+    };
+
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.gap = "8px";
+
+    const saveBtn = document.createElement("button");
+    saveBtn.textContent = "Save roster";
+    styleBtn(saveBtn, true);
+    saveBtn.addEventListener("click", async () => {
+      const rosters = await RB.getRosters();
+      rosters.push({
+        id: "r" + Math.random().toString(36).slice(2, 10),
+        name: nameInput.value.trim() || "Captured roster",
+        enabled: true,
+        names
+      });
+      await RB.storageSet({ [RB.STORAGE.ROSTERS]: rosters });
+      closeCapturePanel();
+      showToast("Saved. Roster blur now covers these names on every page.");
+      setTimeout(hideToast, 3000);
+    });
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "Cancel";
+    styleBtn(cancelBtn, false);
+    cancelBtn.addEventListener("click", closeCapturePanel);
+
+    row.append(saveBtn, cancelBtn);
+    capturePanel.append(title, preview, nameInput, row);
+    document.documentElement.appendChild(capturePanel);
   };
 
   // =========================
@@ -563,6 +804,7 @@
     state.drawingArea = on;
     if (on) {
       setPicking(false);
+      setCapturing(false);
       areaVeil = document.createElement("div");
       areaVeil.setAttribute("data-rb", "veil");
       const s = areaVeil.style;
@@ -683,8 +925,12 @@
 
   let settingTitle = false;
 
+  // What the tab actually shows. True when the user masked this site
+  // OR the shield is up; only the user's choice ever persists.
+  let maskApplied = false;
+
   const enforceTitleMask = () => {
-    if (!state.site.mask || !IS_TOP) return;
+    if (!maskApplied || !IS_TOP) return;
     if (document.title !== "Untitled") {
       if (state.maskSaved) state.maskSaved.title = document.title;
       settingTitle = true;
@@ -693,9 +939,9 @@
     }
   };
 
-  const setMask = (on) => {
-    if (!IS_TOP) return;
-    state.site.mask = on;
+  const applyMaskVisual = (on) => {
+    if (!IS_TOP || maskApplied === on) return;
+    maskApplied = on;
     if (on) {
       state.maskSaved = { title: document.title, icons: [] };
       for (const link of document.querySelectorAll('link[rel~="icon" i], link[rel="shortcut icon" i]')) {
@@ -726,9 +972,14 @@
     }
   };
 
+  const reconcileMask = () => {
+    applyMaskVisual(!!(state.site.mask || state.shieldActive));
+  };
+
   const toggleMaskPersisted = () => {
-    setMask(!state.site.mask);
+    state.site.mask = !state.site.mask;
     RB.setSiteState(HOST, state.site);
+    reconcileMask();
   };
 
   // =========================
@@ -747,14 +998,14 @@
     applySiteSelectors();
     if (IS_TOP) {
       renderAllAreas();
-      if (state.site.mask) setMask(true);
+      reconcileMask();
     }
   };
 
   const clearSite = async () => {
     for (const el of document.querySelectorAll(".rb-el-blur")) el.classList.remove("rb-el-blur");
-    if (state.site.mask) setMask(false);
     state.site = { selectors: [], areas: [], mask: false };
+    reconcileMask();
     renderAllAreas();
     await RB.setSiteState(HOST, state.site);
   };
@@ -766,7 +1017,11 @@
   let indicatorEl = null;
 
   const updateIndicator = () => {
-    const show = IS_TOP && state.meetingActive && state.pro;
+    const show = IS_TOP && state.pro && (state.meetingActive || state.shieldActive);
+    if (show && indicatorEl) {
+      indicatorEl.textContent = state.shieldActive ? "RosterBlur shield on" : "RosterBlur active";
+      return;
+    }
     if (show && !indicatorEl) {
       indicatorEl = document.createElement("div");
       indicatorEl.setAttribute("data-rb", "indicator");
@@ -782,7 +1037,7 @@
       s.borderRadius = "999px";
       s.pointerEvents = "none";
       s.opacity = "0.75";
-      indicatorEl.textContent = "RosterBlur active";
+      indicatorEl.textContent = state.shieldActive ? "RosterBlur shield on" : "RosterBlur active";
       document.documentElement.appendChild(indicatorEl);
     } else if (!show && indicatorEl) {
       indicatorEl.remove();
@@ -807,9 +1062,11 @@
       sendResponse({
         host: HOST,
         picking: state.picking,
+        capturing: state.capturing,
         panic: state.panic,
-        mask: state.site.mask,
+        mask: maskApplied,
         meetingActive: state.meetingActive,
+        shieldActive: state.shieldActive,
         counts: counts()
       });
       return;
@@ -820,7 +1077,8 @@
       else if (msg.command === "panic-blur") setPanic(!state.panic);
       else if (msg.command === "draw-area") setDrawingArea(true);
       else if (msg.command === "toggle-mask") toggleMaskPersisted();
-      sendResponse({ ok: true, picking: state.picking, panic: state.panic, mask: state.site.mask });
+      else if (msg.command === "capture-names") setCapturing(true);
+      sendResponse({ ok: true, picking: state.picking, panic: state.panic, mask: maskApplied });
     } else if (msg.type === "rb-clear-site") {
       clearSite().then(() => sendResponse({ ok: true }));
       return true;
@@ -829,47 +1087,50 @@
 
   const reloadMatcher = () => {
     RB.getRosters().then((rosters) => {
-      const names = RB.enabledNames(rosters);
+      const names = RB.applyExclusions(RB.enabledNames(rosters), state.settings.excludeNames);
       state.matcher = RB.buildMatcher(names, { standalone: state.settings.standaloneNames });
-      state.pseudo = RB.buildPseudonyms(names);
+      state.pseudo = RB.buildPseudonyms(names, state.settings.pseudonymStyle);
       fullRescan();
     });
   };
 
-  chrome.storage.onChanged.addListener((changes, area) => {
+  // One write can change several keys at once (the background sets
+  // shield + meeting together, tests batch settings with flags), so
+  // every changed key must be processed; no early returns.
+  chrome.storage.onChanged.addListener(async (changes, area) => {
     if (area !== "local") return;
-    if (changes[RB.STORAGE.SETTINGS]) {
-      RB.getSettings().then((s) => {
-        state.settings = s;
-        applyBlurVar();
-        reloadMatcher();
-      });
-      return;
-    }
-    if (changes[RB.STORAGE.ROSTERS]) { reloadMatcher(); return; }
+    let rescan = false; // fullRescan needed
+    let rebuild = false; // matcher rebuild needed (ends in a rescan)
+
     if (changes[RB.STORAGE.PRO_FLAG]) {
       state.pro = !!changes[RB.STORAGE.PRO_FLAG].newValue;
-      updateIndicator();
-      fullRescan();
-      return;
+      rescan = true;
     }
     if (changes[RB.STORAGE.MEETING]) {
-      const m = changes[RB.STORAGE.MEETING].newValue || {};
-      state.meetingActive = !!m.active;
-      updateIndicator();
-      fullRescan();
-      return;
+      state.meetingActive = !!((changes[RB.STORAGE.MEETING].newValue || {}).active);
+      rescan = true;
+    }
+    if (changes[RB.STORAGE.SHIELD]) {
+      state.shieldActive = !!((changes[RB.STORAGE.SHIELD].newValue || {}).active);
+      rescan = true;
     }
     if (changes[RB.siteKey(HOST)]) {
       const s = changes[RB.siteKey(HOST)].newValue || { selectors: [], areas: [], mask: false };
-      const maskChanged = !!s.mask !== !!state.site.mask;
       state.site = { selectors: s.selectors || [], areas: s.areas || [], mask: !!s.mask };
-      if (IS_TOP) {
-        renderAllAreas();
-        if (maskChanged) setMask(state.site.mask);
-      }
+      if (IS_TOP) renderAllAreas();
       applySiteSelectors();
     }
+    if (changes[RB.STORAGE.SETTINGS]) {
+      state.settings = await RB.getSettings();
+      applyBlurVar();
+      rebuild = true;
+    }
+    if (changes[RB.STORAGE.ROSTERS]) rebuild = true;
+
+    updateIndicator();
+    if (IS_TOP) reconcileMask();
+    if (rebuild) reloadMatcher();
+    else if (rescan) fullRescan();
   });
 
   // =========================
@@ -882,17 +1143,18 @@
     const [settings, rosters, flags, site] = await Promise.all([
       RB.getSettings(),
       RB.getRosters(),
-      RB.storageGet([RB.STORAGE.PRO_FLAG, RB.STORAGE.MEETING]),
+      RB.storageGet([RB.STORAGE.PRO_FLAG, RB.STORAGE.MEETING, RB.STORAGE.SHIELD]),
       RB.getSiteState(HOST)
     ]);
     state.settings = settings;
     state.pro = !!flags[RB.STORAGE.PRO_FLAG];
     state.meetingActive = !!(flags[RB.STORAGE.MEETING] && flags[RB.STORAGE.MEETING].active);
+    state.shieldActive = !!(flags[RB.STORAGE.SHIELD] && flags[RB.STORAGE.SHIELD].active);
     state.site = site;
 
-    const names = RB.enabledNames(rosters);
+    const names = RB.applyExclusions(RB.enabledNames(rosters), settings.excludeNames);
     state.matcher = RB.buildMatcher(names, { standalone: settings.standaloneNames });
-    state.pseudo = RB.buildPseudonyms(names);
+    state.pseudo = RB.buildPseudonyms(names, settings.pseudonymStyle);
 
     applyBlurVar();
     applySiteState();
@@ -903,6 +1165,7 @@
     window.addEventListener("scroll", queueReposition, { capture: true, passive: true });
     window.addEventListener("resize", queueReposition, { passive: true });
     document.addEventListener("input", onInputEvent, true);
+    window.addEventListener("pagehide", flushStats);
 
     if (IS_TOP && RB.isMeetingHost(HOST)) {
       try {

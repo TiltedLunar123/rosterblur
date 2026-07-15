@@ -1,6 +1,7 @@
 node_modules/
 __pycache__/
 dist/
+dist-firefox/
 coverage/
 *.zip
 .netlify/

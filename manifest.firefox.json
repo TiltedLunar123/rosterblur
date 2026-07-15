@@ -4,7 +4,17 @@
   "short_name": "RosterBlur",
   "version": "2.0.0",
   "description": "Blur student names before you share your screen. Click to blur anything, auto-blur whole rosters. 100 percent local and private.",
-  "minimum_chrome_version": "110",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "rosterblur@rosterblur-pro.netlify.app",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  },
   "permissions": [
     "storage",
     "scripting",
@@ -14,7 +24,10 @@
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js"
+    "scripts": [
+      "shared.js",
+      "background.js"
+    ]
   },
   "content_scripts": [
     {
@@ -55,7 +68,10 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "options_page": "options.html",
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "commands": {
     "toggle-picker": {
       "suggested_key": {

@@ -8,8 +8,11 @@
 
   let rosters = [];
   let settings = null;
-  let pro = false;
+  let access = null; // from RB.getAccess(); .pro covers license OR trial
   let saveTimer = null;
+
+  const pro = () => !!(access && access.pro);
+  const licensed = () => !!(access && access.source === "license");
 
   const uid = () => "r" + Math.random().toString(36).slice(2, 10);
 
@@ -168,13 +171,21 @@
   // =========================
 
   const applyProUi = () => {
-    $("proBadge").classList.toggle("hidden", !pro);
-    $("headerCta").classList.toggle("hidden", pro);
-    $("rosterLock").classList.toggle("hidden", pro);
-    $("rosterEditor").classList.toggle("hidden", !pro);
-    $("rosterDemo").classList.toggle("hidden", pro);
-    $("proPitch").classList.toggle("hidden", pro);
-    $("buyRow").classList.toggle("hidden", pro);
+    const trialOn = access.source === "trial";
+    $("proBadge").classList.toggle("hidden", !licensed());
+    $("headerCta").classList.toggle("hidden", licensed());
+    $("headerCta").textContent = trialOn ? "Keep Pro - $15" : "Get Pro";
+    $("rosterLock").classList.toggle("hidden", pro());
+    $("rosterEditor").classList.toggle("hidden", !pro());
+    $("rosterDemo").classList.toggle("hidden", pro());
+    $("proPitch").classList.toggle("hidden", licensed());
+    $("buyRow").classList.toggle("hidden", licensed());
+    $("trialBanner").classList.toggle("hidden", !trialOn);
+    if (trialOn) {
+      const d = access.trial.daysLeft;
+      $("trialBannerDays").textContent =
+        "Pro trial: " + d + " day" + (d === 1 ? "" : "s") + " left. ";
+    }
   };
 
   // =========================
@@ -187,15 +198,33 @@
     el.className = cls || "muted";
   };
 
+  const tierLabel = (payload) => {
+    if (!payload) return "";
+    if (payload.tier === "school") return " School license, up to " + (payload.seats || 30) + " teachers.";
+    if (payload.tier === "dept") return " Department license, up to " + (payload.seats || 5) + " teachers.";
+    return "";
+  };
+
   const refreshLicenseUi = async () => {
-    const state = await RB.license.getState();
-    pro = state.active;
-    if (state.active) {
+    access = await RB.getAccess();
+    if (licensed()) {
+      const state = await RB.license.getState();
       const when = state.payload && state.payload.iat
         ? new Date(state.payload.iat * 1000).toLocaleDateString()
         : "";
-      setLicenseStatus("Pro is active on this browser" + (when ? " (purchased " + when + ")" : "") + ".", "ok");
+      setLicenseStatus(
+        "Pro is active on this browser" + (when ? " (purchased " + when + ")" : "") + "." + tierLabel(state.payload),
+        "ok"
+      );
       $("keyInput").value = state.key;
+    } else if (access.source === "trial") {
+      const d = access.trial.daysLeft;
+      setLicenseStatus(
+        "Pro trial: " + d + " day" + (d === 1 ? "" : "s") + " left. Buy any time and your key slots in right here.",
+        "muted"
+      );
+    } else if (access.trial.endsAt) {
+      setLicenseStatus("Your free trial has ended. Your rosters are still saved; a key turns everything back on.", "muted");
     }
     applyProUi();
   };
@@ -259,6 +288,10 @@
     $("blurOut").textContent = settings.blurPx + "px";
     $("standaloneToggle").checked = settings.standaloneNames;
     $("pseudoToggle").checked = settings.pseudonymize;
+    $("pseudoStyle").value = settings.pseudonymStyle || "student";
+    $("avatarToggle").checked = settings.blurAvatars;
+    $("gradeToggle").checked = settings.blurGrades;
+    $("excludeNames").value = (settings.excludeNames || []).join("\n");
     $("patEmail").checked = settings.patterns.email;
     $("patPhone").checked = settings.patterns.phone;
     $("patId").checked = settings.patterns.studentId;
@@ -273,6 +306,15 @@
     $("blurRange").addEventListener("change", () => persistSettings({ blurPx: Number($("blurRange").value) }));
     $("standaloneToggle").addEventListener("change", () => persistSettings({ standaloneNames: $("standaloneToggle").checked }));
     $("pseudoToggle").addEventListener("change", () => persistSettings({ pseudonymize: $("pseudoToggle").checked }));
+    $("pseudoStyle").addEventListener("change", () => persistSettings({ pseudonymStyle: $("pseudoStyle").value }));
+    $("avatarToggle").addEventListener("change", () => persistSettings({ blurAvatars: $("avatarToggle").checked }));
+    $("gradeToggle").addEventListener("change", () => persistSettings({ blurGrades: $("gradeToggle").checked }));
+    $("excludeNames").addEventListener("input", () => {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        persistSettings({ excludeNames: RB.parseRoster($("excludeNames").value) });
+      }, 400);
+    });
     $("patEmail").addEventListener("change", () => persistSettings({ patterns: { email: $("patEmail").checked } }));
     $("patPhone").addEventListener("change", () => persistSettings({ patterns: { phone: $("patPhone").checked } }));
     $("patId").addEventListener("change", () => persistSettings({ patterns: { studentId: $("patId").checked } }));
@@ -294,6 +336,7 @@
 
     $("buyBtn").addEventListener("click", openBuy);
     $("demoBuyBtn").addEventListener("click", openBuy);
+    $("trialBannerBuy").addEventListener("click", openBuy);
     $("activateBtn").addEventListener("click", activate);
     $("keyInput").addEventListener("keydown", (e) => {
       if (e.key === "Enter") activate();

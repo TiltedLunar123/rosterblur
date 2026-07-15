@@ -1,4 +1,6 @@
 // Popup logic: reflect the active tab's RosterBlur state and drive it.
+// The shield button is global (background owns it); everything else in
+// the tool grid talks to the active tab's content script.
 
 (() => {
   "use strict";
@@ -7,7 +9,8 @@
 
   let tabId = null;
   let tabState = null; // from the content script, null when unreachable
-  let pro = false;
+  let access = null; // from RB.getAccess()
+  let shieldOn = false;
   let clearTimer = null;
 
   const sendToTab = (msg) =>
@@ -23,6 +26,18 @@
       }
     });
 
+  const sendToBackground = (msg) =>
+    new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage(msg, (res) => {
+          if (chrome.runtime.lastError) return resolve(null);
+          resolve(res || null);
+        });
+      } catch {
+        resolve(null);
+      }
+    });
+
   const setToggleButton = (btn, on) => {
     btn.classList.toggle("active", !!on);
     btn.setAttribute("aria-pressed", on ? "true" : "false");
@@ -30,10 +45,29 @@
 
   const plural = (n, word) => n + " " + word + (n === 1 ? "" : "s");
 
+  const pro = () => !!(access && access.pro);
+
+  // =========================
+  // Shield
+  // =========================
+
+  const refreshShield = () => {
+    setToggleButton($("shieldBtn"), shieldOn);
+    $("shieldSub").textContent = shieldOn
+      ? (pro()
+        ? "ON: roster names and tab titles are hidden."
+        : "ON: tab titles are hidden. Pro adds name blur.")
+      : "Off. One click before you share.";
+  };
+
+  // =========================
+  // Site status
+  // =========================
+
   const siteStatusText = () => {
     const c = (tabState && tabState.counts) || {};
     const parts = [];
-    if (pro && c.names) parts.push(plural(c.names, "name") + " hidden");
+    if (pro() && c.names) parts.push(plural(c.names, "name") + " hidden");
     if (c.selectors) parts.push(plural(c.selectors, "element"));
     if (c.areas) parts.push(plural(c.areas, "area"));
     if (tabState && tabState.mask) parts.push("title masked");
@@ -50,7 +84,7 @@
 
   const refreshButtons = () => {
     const reachable = !!tabState;
-    for (const id of ["pickerBtn", "areaBtn", "panicBtn", "maskBtn", "clearSiteBtn"]) {
+    for (const id of ["pickerBtn", "areaBtn", "panicBtn", "maskBtn", "clearSiteBtn", "captureBtn"]) {
       $(id).disabled = !reachable;
     }
     $("siteNote").classList.toggle("hidden", reachable);
@@ -71,30 +105,117 @@
       tabState.mask = res.mask;
       refreshButtons();
     }
-    if (name === "toggle-picker" || name === "draw-area") window.close();
+    if (name === "toggle-picker" || name === "draw-area" || name === "capture-names") window.close();
   };
 
-  const init = async () => {
-    const [settings, flags, rosters] = await Promise.all([
-      RB.getSettings(),
-      RB.storageGet([RB.STORAGE.PRO_FLAG]),
-      RB.getRosters()
-    ]);
-    pro = !!flags[RB.STORAGE.PRO_FLAG];
-    const names = RB.enabledNames(rosters);
+  // =========================
+  // Access-dependent UI
+  // =========================
 
-    $("blurRange").value = settings.blurPx;
-    $("blurOut").textContent = settings.blurPx + "px";
-    $("proBadge").classList.toggle("hidden", !pro);
-    $("rosterCard").classList.toggle("hidden", !pro);
-    $("proCard").classList.toggle("hidden", pro);
-    if (pro) {
+  const buyUrl = () => RB.license.PRO.BUY_URL;
+
+  const applyAccessUi = async (settings, rosters) => {
+    const names = RB.enabledNames(rosters);
+    const trial = access.trial || { active: false, endsAt: 0, daysLeft: 0 };
+
+    $("proBadge").classList.toggle("hidden", access.source !== "license");
+    $("trialBadge").classList.toggle("hidden", access.source !== "trial");
+    if (access.source === "trial") {
+      $("trialBadge").textContent = "TRIAL: " + plural(trial.daysLeft, "day") + " left";
+    }
+
+    $("rosterCard").classList.toggle("hidden", !pro());
+    $("proCard").classList.toggle("hidden", pro());
+    $("captureBtn").classList.toggle("hidden", !pro());
+
+    if (pro()) {
       $("rosterToggle").checked = settings.rosterEnabled;
       $("pseudoToggle").checked = settings.pseudonymize;
       $("rosterInfo").textContent = names.length
         ? plural(names.length, "name")
         : "no names yet";
+      renderRosterQuick(rosters);
+      const hint = $("trialHint");
+      hint.classList.toggle("hidden", access.source !== "trial");
+      if (access.source === "trial") {
+        $("trialHintText").textContent =
+          "Everything is unlocked for " + plural(trial.daysLeft, "more day") + ". ";
+      }
+    } else if (trial.endsAt) {
+      // Trial ran out: name the loss, not the feature list.
+      $("upsellTitle").textContent = "Your free trial ended";
+      $("upsellText").textContent =
+        "Your rosters are still saved on this device. Pro turns auto-blur back on: $15, once, forever.";
     }
+  };
+
+  // Quick per-roster toggles so multi-period teachers can switch
+  // classes without opening options.
+  const renderRosterQuick = (rosters) => {
+    const box = $("rosterQuick");
+    box.textContent = "";
+    box.classList.toggle("hidden", rosters.length < 2);
+    if (rosters.length < 2) return;
+    for (const roster of rosters) {
+      const label = document.createElement("label");
+      const check = document.createElement("input");
+      check.type = "checkbox";
+      check.checked = roster.enabled;
+      check.addEventListener("change", async () => {
+        const all = await RB.getRosters();
+        const target = all.find((r) => r.id === roster.id);
+        if (target) {
+          target.enabled = check.checked;
+          await RB.storageSet({ [RB.STORAGE.ROSTERS]: all });
+        }
+      });
+      const text = document.createElement("span");
+      text.textContent = roster.name + " (" + roster.names.length + ")";
+      label.append(check, text);
+      box.appendChild(label);
+    }
+  };
+
+  // =========================
+  // Stats and review ask
+  // =========================
+
+  const reviewUrl = () =>
+    navigator.userAgent.includes("Firefox")
+      ? "https://addons.mozilla.org/firefox/addon/rosterblur@rosterblur-pro.netlify.app/reviews/"
+      : "https://chromewebstore.google.com/detail/" + chrome.runtime.id + "/reviews";
+
+  const applyStatsUi = (stats, review) => {
+    const week = Number(stats.week) || 0;
+    const total = Number(stats.total) || 0;
+    if (pro() && week > 0) {
+      $("statsRow").textContent = "RosterBlur hid " + plural(week, "name") + " this week.";
+      $("statsRow").classList.remove("hidden");
+    }
+    const dismissed = !!(review && review.dismissed);
+    if (pro() && total >= 150 && !dismissed) {
+      $("reviewRow").classList.remove("hidden");
+    }
+  };
+
+  // =========================
+  // Boot
+  // =========================
+
+  const init = async () => {
+    const [settings, rosters, extra] = await Promise.all([
+      RB.getSettings(),
+      RB.getRosters(),
+      RB.storageGet([RB.STORAGE.SHIELD, RB.STORAGE.STATS, RB.STORAGE.REVIEW])
+    ]);
+    access = await RB.getAccess();
+    shieldOn = !!(extra[RB.STORAGE.SHIELD] && extra[RB.STORAGE.SHIELD].active);
+
+    $("blurRange").value = settings.blurPx;
+    $("blurOut").textContent = settings.blurPx + "px";
+    refreshShield();
+    await applyAccessUi(settings, rosters);
+    applyStatsUi(extra[RB.STORAGE.STATS] || {}, extra[RB.STORAGE.REVIEW]);
 
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -121,10 +242,24 @@
     await RB.storageSet({ [RB.STORAGE.SETTINGS]: { ...settings, ...patch } });
   };
 
+  $("shieldBtn").addEventListener("click", async () => {
+    const res = await sendToBackground({ type: "rb-toggle-shield" });
+    if (res) {
+      shieldOn = !!res.shield;
+      refreshShield();
+      // Give the content script a beat, then refresh the site line.
+      setTimeout(async () => {
+        tabState = await sendToTab({ type: "rb-get-state" });
+        refreshButtons();
+      }, 350);
+    }
+  });
+
   $("pickerBtn").addEventListener("click", command("toggle-picker"));
   $("areaBtn").addEventListener("click", command("draw-area"));
   $("panicBtn").addEventListener("click", command("panic-blur"));
   $("maskBtn").addEventListener("click", command("toggle-mask"));
+  $("captureBtn").addEventListener("click", command("capture-names"));
 
   $("blurRange").addEventListener("input", () => {
     $("blurOut").textContent = $("blurRange").value + "px";
@@ -165,11 +300,25 @@
   $("editRostersLink").addEventListener("click", openOptions);
 
   $("buyBtn").addEventListener("click", () => {
-    chrome.tabs.create({ url: RB.license.PRO.BUY_URL });
+    chrome.tabs.create({ url: buyUrl() });
+  });
+  $("trialBuyLink").addEventListener("click", (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: buyUrl() });
   });
   $("haveKeyLink").addEventListener("click", (e) => {
     e.preventDefault();
     chrome.tabs.create({ url: chrome.runtime.getURL("options.html#pro") });
+  });
+
+  $("reviewLink").addEventListener("click", async (e) => {
+    e.preventDefault();
+    await RB.storageSet({ [RB.STORAGE.REVIEW]: { dismissed: true } });
+    chrome.tabs.create({ url: reviewUrl() });
+  });
+  $("reviewDismiss").addEventListener("click", async () => {
+    await RB.storageSet({ [RB.STORAGE.REVIEW]: { dismissed: true } });
+    $("reviewRow").classList.add("hidden");
   });
 
   init();

@@ -39,6 +39,15 @@
     .slider-row { display: flex; align-items: center; gap: 12px; max-width: 340px; }
     .slider-row output { min-width: 40px; text-align: right; }
     .patterns label.row { padding-left: 4px; }
+    select {
+      font: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 8px;
+      font-size: 12.5px;
+    }
 
     /* Live demo (free users) */
     .demo { background: #f5f6fa; color: #1f2937; border-radius: 8px; padding: 8px 10px; }
@@ -63,6 +72,20 @@
     }
     .price { font-size: 30px; font-weight: 700; line-height: 1.1; }
     .price-box .muted { display: block; margin-top: 5px; }
+    #trialBanner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid rgba(252, 211, 77, 0.45);
+      background: rgba(252, 211, 77, 0.08);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 18px;
+      font-size: 13px;
+    }
+    #trialBanner .grow { flex: 1; }
+    #trialBanner strong { color: var(--warn); }
+    .site-license { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
     .steps { display: flex; gap: 16px; margin: 16px 0 14px; flex-wrap: wrap; }
     .step { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--muted); }
     .step b {
@@ -93,12 +116,18 @@
     browser storage and are never sent anywhere.
   </p>
 
+  <div id="trialBanner" class="hidden">
+    <span class="grow"><strong id="trialBannerDays"></strong>
+      <span class="muted">Every Pro feature is unlocked while you try it. No card, no account.</span></span>
+    <button id="trialBannerBuy" class="primary">Keep it - $15 once</button>
+  </div>
+
   <section class="card" id="quickStart">
     <h2>Get set up</h2>
     <ol class="setup">
       <li>Pin RosterBlur: click the puzzle piece next to the address bar, then the pin.</li>
-      <li>On any page, press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> and click anything to blur it. Blurs stick per site.</li>
-      <li>Presenting a gradebook or LMS? Add a class roster below and every name gets blurred for you.</li>
+      <li>Add a class roster below (or open your gradebook and use "Capture roster from this page" in the popup) and every student name gets blurred for you.</li>
+      <li>Before you share your screen, press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>: the presentation shield turns on roster blur and masks your tab titles in one stroke.</li>
     </ol>
   </section>
 
@@ -137,8 +166,31 @@
         </label>
         <label class="row">
           <input type="checkbox" id="pseudoToggle" />
-          <span>Pseudonymize: show "Student 1", "Student 2", ... instead of a blur</span>
+          <span>Pseudonymize: replace names instead of blurring them</span>
         </label>
+        <label class="row" style="padding-left:26px">
+          <span class="muted">Label style</span>
+          <select id="pseudoStyle" aria-label="Pseudonym label style">
+            <option value="student">Student 1, Student 2, ...</option>
+            <option value="names">Fictional names (Avery M., Riley P., ...)</option>
+          </select>
+        </label>
+        <label class="row">
+          <input type="checkbox" id="avatarToggle" />
+          <span>Blur student photos and avatars whose alt text matches a roster name</span>
+        </label>
+        <label class="row">
+          <input type="checkbox" id="gradeToggle" />
+          <span>Blur grade cells in tables (A-, 95%, 18/20)</span>
+        </label>
+      </div>
+
+      <div style="margin-top:16px">
+        <h2 style="font-size:13px">Never blur these names</h2>
+        <p class="muted" style="margin:0 0 6px">
+          Your own name, co-teachers, anyone who should stay visible. One per line.
+        </p>
+        <textarea id="excludeNames" style="min-height:56px" placeholder="Alex Rivera"></textarea>
       </div>
 
       <div class="patterns" style="margin-top:14px">
@@ -191,9 +243,10 @@
       <div class="pro-grid">
         <ul class="features">
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Roster auto-blur on every page, including content that loads or re-renders late</span></li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Pseudonymize: stable "Student 1", "Student 2" labels instead of a blur</span></li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Auto-detect and blur emails, phone numbers, and long ID numbers</span></li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>CSV roster import and multiple class rosters with toggles</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Capture rosters straight off your gradebook or class list, no typing</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Pseudonymize with stable "Student 1" labels or natural fictional names</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Blur student photos, grade cells, emails, phone numbers, and ID numbers</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>CSV import, multiple class rosters with toggles, and a never-blur list</span></li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Meeting mode: switches on by itself when Meet, Zoom, or Teams opens</span></li>
         </ul>
         <div class="price-box">
@@ -204,8 +257,8 @@
       </div>
       <div class="steps">
         <span class="step"><b>1</b><span>Pay through Stripe checkout</span></span>
-        <span class="step"><b>2</b><span>Your key appears on the confirmation page</span></span>
-        <span class="step"><b>3</b><span>Paste it below</span></span>
+        <span class="step"><b>2</b><span>Click "Activate in RosterBlur" on the confirmation page</span></span>
+        <span class="step"><b>3</b><span>Done. Or paste the key below any time.</span></span>
       </div>
     </div>
 
@@ -223,15 +276,27 @@
       extension never contacts a server. Lost your key? Reopen the confirmation
       link from Stripe; it shows the same key any time.
     </p>
+
+    <div class="site-license">
+      <h2 style="font-size:13px">Buying for a department or school?</h2>
+      <p class="muted" style="margin:0">
+        Site licenses cover a whole team with one key: Department (5 teachers)
+        $49, School building (30 teachers) $129. Purchase orders and invoices
+        are fine. Email
+        <a href="mailto:support@secplusmastery.com?subject=RosterBlur%20site%20license">support@secplusmastery.com</a>
+        and it gets sorted same-day.
+      </p>
+    </div>
   </section>
 
   <section class="card">
     <h2>Shortcuts and privacy</h2>
     <p class="muted" style="margin-top:0">
-      Alt+Shift+B toggles the click-to-blur picker. Alt+Shift+H is the panic
-      blur that hides the whole page. Change both at chrome://extensions/shortcuts.
-      Click-to-blur, area blurs, and the tab title mask persist per site and
-      re-apply when you come back.
+      Alt+Shift+S toggles the presentation shield (roster blur on, tab titles
+      masked, all tabs at once). Alt+Shift+B toggles the click-to-blur picker.
+      Alt+Shift+H is the panic blur that hides the whole page. Change any of
+      them at chrome://extensions/shortcuts. Click-to-blur, area blurs, and the
+      tab title mask persist per site and re-apply when you come back.
     </p>
     <p class="muted" style="margin-bottom:0">
       RosterBlur makes zero network requests. It helps you protect student
