@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.1
+
+- The presentation shield now makes its free tier obvious. Free users
+  could always arm it (it masks tab titles), but the button barely
+  reacted. Armed state gets a clear highlight, the caption says
+  plainly that name blur is the Pro half, and arming without Pro
+  points at the upgrade card.
+
 ## 2.0.0
 
 The "one click before you share" release.

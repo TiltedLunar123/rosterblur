@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "RosterBlur: Blur Student Names on Screen",
   "short_name": "RosterBlur",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Blur student names before you share your screen. Click to blur anything, auto-blur whole rosters. 100 percent local and private.",
   "minimum_chrome_version": "110",
   "permissions": [

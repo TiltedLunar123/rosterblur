@@ -1,6 +1,6 @@
 {
   "name": "rosterblur",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "description": "Blur student names before you share your screen. 100 percent local.",
   "scripts": {
