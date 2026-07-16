@@ -44,6 +44,8 @@ const RB = (() => {
   const PRO = Object.freeze({
     PRICE_LABEL: "$15 lifetime",
     BUY_URL: "https://buy.stripe.com/6oU9AUg6Ld3Q4YU9VNdUY01",
+    BUY_URL_DEPT: "https://buy.stripe.com/4gM9AU5s71l8fDyd7ZdUY02",
+    BUY_URL_SCHOOL: "https://buy.stripe.com/4gM4gAdYD5Bo4YU0lddUY03",
     ACTIVATE_URL: "https://rosterblur-pro.netlify.app/activate",
     SUPPORT_EMAIL: "support@secplusmastery.com",
     STORAGE_KEY: STORAGE.LICENSE

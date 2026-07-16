@@ -337,6 +337,12 @@
     $("buyBtn").addEventListener("click", openBuy);
     $("demoBuyBtn").addEventListener("click", openBuy);
     $("trialBannerBuy").addEventListener("click", openBuy);
+    $("buyDeptBtn").addEventListener("click", () => {
+      chrome.tabs.create({ url: RB.license.PRO.BUY_URL_DEPT });
+    });
+    $("buySchoolBtn").addEventListener("click", () => {
+      chrome.tabs.create({ url: RB.license.PRO.BUY_URL_SCHOOL });
+    });
     $("activateBtn").addEventListener("click", activate);
     $("keyInput").addEventListener("keydown", (e) => {
       if (e.key === "Enter") activate();

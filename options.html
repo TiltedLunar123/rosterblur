@@ -86,6 +86,7 @@
     #trialBanner .grow { flex: 1; }
     #trialBanner strong { color: var(--warn); }
     .site-license { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
+    .site-license-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
     .steps { display: flex; gap: 16px; margin: 16px 0 14px; flex-wrap: wrap; }
     .step { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--muted); }
     .step b {
@@ -279,10 +280,16 @@
 
     <div class="site-license">
       <h2 style="font-size:13px">Buying for a department or school?</h2>
-      <p class="muted" style="margin:0">
-        Site licenses cover a whole team with one key: Department (5 teachers)
-        $49, School building (30 teachers) $129. Purchase orders and invoices
-        are fine. Email
+      <p class="muted" style="margin:0 0 10px">
+        One key covers the whole team. Same checkout, same offline
+        activation; the key just carries more seats.
+      </p>
+      <div class="site-license-buttons">
+        <button id="buyDeptBtn">Department: 5 teachers, $49</button>
+        <button id="buySchoolBtn">School building: 30 teachers, $129</button>
+      </div>
+      <p class="muted" style="margin:10px 0 0">
+        Need a purchase order or invoice instead? Email
         <a href="mailto:support@secplusmastery.com?subject=RosterBlur%20site%20license">support@secplusmastery.com</a>
         and it gets sorted same-day.
       </p>
