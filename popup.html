@@ -19,11 +19,15 @@
       margin-bottom: 10px;
     }
     .shield svg { flex: none; width: 20px; height: 20px; color: var(--accent); }
+    .shield.active { border-color: var(--mint); background: rgba(110, 231, 183, 0.08); }
     .shield.active svg { color: var(--mint); }
     .shield .shield-text { flex: 1; }
     .shield .shield-title { font-weight: 600; font-size: 13px; }
+    .shield.active .shield-title { color: var(--mint); }
     .shield .shield-sub { font-size: 11.5px; color: var(--muted); }
     .shield.active .shield-sub { color: var(--mint); }
+    @keyframes rb-nudge { 0%, 100% { border-color: var(--border); } 50% { border-color: var(--accent); } }
+    .card.nudge { animation: rb-nudge 0.9s ease 2; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .tool {
       display: flex;

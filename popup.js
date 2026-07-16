@@ -56,8 +56,10 @@
     $("shieldSub").textContent = shieldOn
       ? (pro()
         ? "ON: roster names and tab titles are hidden."
-        : "ON: tab titles are hidden. Pro adds name blur.")
-      : "Off. One click before you share.";
+        : "ON: tab titles are hidden. Name blur is a Pro feature.")
+      : (pro()
+        ? "Off. One click before you share."
+        : "Off. Hides tab titles; name blur needs Pro.");
   };
 
   // =========================
@@ -247,6 +249,13 @@
     if (res) {
       shieldOn = !!res.shield;
       refreshShield();
+      // Free users just armed half a shield; point at the missing half.
+      if (shieldOn && !pro()) {
+        const card = $("proCard");
+        card.classList.remove("nudge");
+        void card.offsetWidth; // restart the animation
+        card.classList.add("nudge");
+      }
       // Give the content script a beat, then refresh the site line.
       setTimeout(async () => {
         tabState = await sendToTab({ type: "rb-get-state" });
