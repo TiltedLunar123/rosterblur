@@ -115,27 +115,69 @@ def set_env_var(name, value, log):
     log("%s stored for: %s" % (name, ", ".join(CONTEXTS)))
 
 
-def stripe_post(path, form, key):
-    status, data = http("POST", "https://api.stripe.com/v1/" + path, token=key, form=form)
+PERMS_HINT = (
+    "Fix: edit the key at dashboard.stripe.com/apikeys and set WRITE on\n"
+    "Products, Prices (labeled 'Plans' in some dashboards), and Payment\n"
+    "Links. Then retry here; already-created pieces are reused, not duplicated."
+)
+
+
+def stripe_call(method, path, form, key):
+    url = "https://api.stripe.com/v1/" + path
+    if method == "GET" and form:
+        url += "?" + urllib.parse.urlencode(form)
+        form = None
+    status, data = http(method, url, token=key, form=form)
     if status != 200:
         msg = ""
         if isinstance(data, dict):
-            msg = ((data.get("error") or {}).get("message") or "")[:200]
-        raise RuntimeError("Stripe %s failed (%s): %s" % (path, status, msg or "no detail"))
+            msg = ((data.get("error") or {}).get("message") or "")[:300]
+        detail = "Stripe %s %s failed (%s): %s" % (method, path, status, msg or "no detail")
+        if status in (401, 403) or "permission" in msg.lower():
+            detail += "\n" + PERMS_HINT
+        raise RuntimeError(detail)
     return data
 
 
+def stripe_post(path, form, key):
+    return stripe_call("POST", path, form, key)
+
+
+def find_product(name, key):
+    data = stripe_call("GET", "products", {"limit": "100", "active": "true"}, key)
+    for p in data.get("data") or []:
+        if p.get("name") == name and (p.get("metadata") or {}).get("app") == "rosterblur":
+            return p
+    return None
+
+
+def find_price(product_id, amount, key):
+    data = stripe_call("GET", "prices", {"product": product_id, "limit": "100", "active": "true"}, key)
+    for p in data.get("data") or []:
+        if p.get("unit_amount") == amount and p.get("currency") == "usd" and p.get("type") == "one_time":
+            return p
+    return None
+
+
+# A failed earlier run may have left a product (or product + price)
+# behind; reuse anything that already matches instead of duplicating.
 def create_tier(tier, key, log):
-    log("Creating product: " + tier["product"])
-    product = stripe_post("products", {
-        "name": tier["product"],
-        "metadata[app]": "rosterblur",
-    }, key)
-    price = stripe_post("prices", {
-        "unit_amount": str(tier["amount"]),
-        "currency": "usd",
-        "product": product["id"],
-    }, key)
+    product = find_product(tier["product"], key)
+    if product:
+        log("Reusing existing product: " + tier["product"])
+    else:
+        log("Creating product: " + tier["product"])
+        product = stripe_post("products", {
+            "name": tier["product"],
+            "metadata[app]": "rosterblur",
+        }, key)
+    price = find_price(product["id"], tier["amount"], key)
+    if not price:
+        price = stripe_post("prices", {
+            "unit_amount": str(tier["amount"]),
+            "currency": "usd",
+            "product": product["id"],
+        }, key)
     link = stripe_post("payment_links", {
         "line_items[0][price]": price["id"],
         "line_items[0][quantity]": "1",
